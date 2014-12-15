@@ -85,6 +85,7 @@ public:
   static const Property::Index TEXT_COLOR;                        ///< name "text-color"               type VECTOR4
 
   /**
+   * @deprecated Use MeshActor instead.
    * @brief Create an uninitialized TextActor handle.
    *
    * This can be initialised with TextActor::New().
