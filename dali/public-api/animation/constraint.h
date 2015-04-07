@@ -470,13 +470,13 @@ private: // Not intended for use by Application developers
   /**
    * @brief Construct a new constraint which targets a property.
    *
-   * @param[in]  handle  The handle to the property-owning object.
-   * @param[in]  target  The index of the property to constrain.
-   * @param[in]  target  Type The type of the constrained property.
-   * @param[in]  func    The constraint function.
+   * @param[in]  handle       The handle to the property-owning object.
+   * @param[in]  targetIndex  The index of the property to constrain.
+   * @param[in]  targetType   Type The type of the constrained property.
+   * @param[in]  func         The constraint function.
    * @return The new constraint.
    */
-  static Constraint New( Handle handle, Property::Index target, Property::Type targetType, CallbackBase* func );
+  static Constraint New( Handle handle, Property::Index targetIndex, Property::Type targetType, CallbackBase* func );
 };
 
 } // namespace Dali
