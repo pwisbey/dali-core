@@ -359,6 +359,9 @@ private:
    */
   void DoRender( RenderInstruction& instruction, Shader& defaultShader );
 
+  void SetupVRMode();
+  void RenderVR();
+
 private:
 
   /**

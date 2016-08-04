@@ -413,12 +413,14 @@ public:
    */
   void Clear(GLbitfield mask, ClearMode mode )
   {
+    DALI_LOG_ERROR("CLEARRRR\n");
     bool forceClear = (mode == FORCE_CLEAR );
     mask = mFrameBufferStateCache.GetClearMask( mask, forceClear , mScissorTestEnabled );
 
     if( mask > 0 )
     {
       LOG_GL("Clear %d\n", mask);
+      DALI_LOG_ERROR(" >>> CLEARRRR for sure\n");
       CHECK_GL( mGlAbstraction, mGlAbstraction.Clear( mask ) );
     }
   }
@@ -1638,6 +1640,72 @@ public:
       CHECK_GL( mGlAbstraction, mGlAbstraction.Viewport(x, y, width, height) );
       mViewPort = newViewport; // remember new one
     }
+  }
+
+  GLuint CreateShader( GLenum shaderType )
+  {
+    GLuint value = 0;
+    CHECK_GL( mGlAbstraction, value = mGlAbstraction.CreateShader( shaderType ) );
+    return value;
+  }
+
+  GLuint CreateProgram()
+  {
+    GLuint value = 0;
+    CHECK_GL( mGlAbstraction, value = mGlAbstraction.CreateProgram() );
+    return value;
+  }
+
+  void ShaderSource( GLuint shader, GLsizei count, const GLchar **string, const GLint *length )
+  {
+    CHECK_GL( mGlAbstraction, mGlAbstraction.ShaderSource( shader, count, string, length ) );
+  }
+
+  bool CompileShader( GLuint shader )
+  {
+    CHECK_GL( mGlAbstraction, mGlAbstraction.CompileShader( shader ) );
+    GLint status( 0 );
+    mGlAbstraction.GetShaderiv( shader, GL_COMPILE_STATUS, &status );
+    if( status != GL_TRUE )
+    {
+      char buf[1024];
+      mGlAbstraction.GetShaderInfoLog( shader, 1024, 0, buf );
+      DALI_LOG_ERROR("CompileError: %s\n", buf);
+    }
+    return ( status == GL_TRUE );
+  }
+
+  void AttachShader( GLuint program,  GLuint shader )
+  {
+    CHECK_GL( mGlAbstraction, mGlAbstraction.AttachShader( program, shader ) );
+  }
+
+  void DetachShader( GLuint program,  GLuint shader )
+  {
+    CHECK_GL( mGlAbstraction, mGlAbstraction.DetachShader( program, shader ) );
+  }
+
+  void DeleteShader( GLuint shader )
+  {
+    CHECK_GL( mGlAbstraction, mGlAbstraction.DeleteShader( shader ) );
+  }
+
+  bool LinkProgram( GLuint program )
+  {
+    CHECK_GL( mGlAbstraction, mGlAbstraction.LinkProgram( program ) );
+    GLint status( 0 );
+    mGlAbstraction.GetProgramiv( program, GL_LINK_STATUS, &status );
+    return ( status == GL_TRUE );
+  }
+
+  void UseProgram( GLuint program )
+  {
+    mGlAbstraction.UseProgram( program );
+  }
+
+  GLint GetUniformLocation( GLuint program, const GLchar* name )
+  {
+    return mGlAbstraction.GetUniformLocation( program, name );
   }
 
   /**
