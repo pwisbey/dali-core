@@ -359,6 +359,7 @@ public:
 
 public: // Not intended for application developers
 
+  /// @cond internal
   /**
    * @brief This constructor is used by Stage::GetCurrent() methods.
    *
@@ -366,6 +367,7 @@ public: // Not intended for application developers
    * @param [in] stage A pointer to a Dali resource
    */
   explicit DALI_INTERNAL Stage(Internal::Stage* stage);
+  /// @endcond
 };
 
 /**

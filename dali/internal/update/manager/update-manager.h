@@ -1,5 +1,5 @@
-#ifndef __DALI_INTERNAL_SCENE_GRAPH_UPDATE_MANAGER_H__
-#define __DALI_INTERNAL_SCENE_GRAPH_UPDATE_MANAGER_H__
+#ifndef DALI_INTERNAL_SCENE_GRAPH_UPDATE_MANAGER_H
+#define DALI_INTERNAL_SCENE_GRAPH_UPDATE_MANAGER_H
 
 /*
  * Copyright (c) 2016 Samsung Electronics Co., Ltd.
@@ -74,6 +74,7 @@ class DiscardQueue;
 class PanGesture;
 class RenderManager;
 class RenderTaskList;
+class RenderTaskProcessor;
 class RenderQueue;
 class TextureCacheDispatcher;
 class PropertyBuffer;
@@ -104,6 +105,7 @@ public:
    * @param[in] renderQueue Used to queue messages for the next render.
    * @param[in] textureCacheDispatcher Used for sending messages to texture cache.
    * @param[in] geometryBatcher Used when geometry batching is enabled.
+   * @param[in] renderTaskProcessor Handles RenderTasks and RenderInstrucitons.
    */
   UpdateManager( NotificationManager& notificationManager,
                  CompleteNotificationInterface& animationFinishedNotifier,
@@ -114,7 +116,8 @@ public:
                  RenderManager& renderManager,
                  RenderQueue& renderQueue,
                  TextureCacheDispatcher& textureCacheDispatcher,
-                 GeometryBatcher& geometryBatcher );
+                 GeometryBatcher& geometryBatcher,
+                 RenderTaskProcessor& renderTaskProcessor );
 
   /**
    * Destructor.
@@ -1279,10 +1282,11 @@ inline void AttachColorTextureToFrameBuffer( UpdateManager& manager, Render::Fra
   new (slot) LocalType( &manager, &UpdateManager::AttachColorTextureToFrameBuffer, &frameBuffer, texture, mipmapLevel, layer );
 }
 
+
 } // namespace SceneGraph
 
 } // namespace Internal
 
 } // namespace Dali
 
-#endif // __DALI_INTERNAL_SCENE_GRAPH_UPDATE_MANAGER_H__
+#endif // DALI_INTERNAL_SCENE_GRAPH_UPDATE_MANAGER_H

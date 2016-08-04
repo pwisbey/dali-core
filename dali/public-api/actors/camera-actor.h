@@ -63,7 +63,7 @@ enum ProjectionMode
 } // namespace Camera
 
 /**
- * @brief Controls a camera.
+ * @brief CameraActor controls a camera.
  *
  * Allows the developer to use actor semantics to control a camera.
  *
@@ -360,6 +360,7 @@ public:
   void SetOrthographicProjection( float left, float right, float top, float bottom, float near, float far );
 
 public: // Not intended for use by Application developers
+  /// @cond internal
   /**
    * @brief This constructor is used by CameraActor::New() methods.
    *
@@ -367,6 +368,7 @@ public: // Not intended for use by Application developers
    * @param [in] actor A pointer to a newly allocated Dali resource
    */
   explicit DALI_INTERNAL CameraActor(Internal::CameraActor* actor);
+  /// @endcond
 };
 
 /**
