@@ -41,6 +41,9 @@
 #include <dali/internal/render/renderers/render-renderer.h>
 #include <dali/internal/render/renderers/render-sampler.h>
 #include <dali/internal/render/shaders/program-controller.h>
+
+#include <dali/internal/render/common/renderer-vr.h>
+
 #include <cstdio>
 namespace Dali
 {
@@ -104,6 +107,8 @@ struct VrImpl
   unsigned int                  mainFrameBuffer;
   unsigned int                  mainVRProgramGL;
   unsigned int                  vertexBuffer; // contains 'cage' data, vec3, vec2
+  unsigned int                  indexBuffer; // contains indices
+  unsigned int                  indicesCount;
   Matrix                        MVP;
   int                           uniformLocations[VR_UNIFORM_MAX];
 
@@ -551,7 +556,7 @@ ProgramCache* RenderManager::GetProgramCache()
   return &(mImpl->programController);
 }
 
-#define GL(x) { x; int err = mImpl->context.GetError(); if(err) { DALI_LOG_ERROR( "GL_ERROR: '%s', %x\n", #x, (unsigned)err);fflush(stderr);fflush(stdout);} else { DALI_LOG_ERROR("GL Call: %s\n", #x); fflush(stdout);} }
+#define GL(x) { x; int err = mImpl->context.GetError(); if(err) { DALI_LOG_ERROR( "GL_ERROR: '%s', %x\n", #x, (unsigned)err);fflush(stderr);fflush(stdout);} else { /*DALI_LOG_ERROR("GL Call: %s\n", #x); fflush(stdout);*/} }
 
 bool RenderManager::Render( Integration::RenderStatus& status )
 {
@@ -894,7 +899,9 @@ void RenderManager::SetupVRMode()
     "varying mediump vec2  vTexCoord;\n"
     "void main()\n"
     "{"
-    "  gl_Position = mvp * vec4( aPosition, 1.0 );\n"
+    "  vec3 pos = aPosition;\n"
+    //"  pos.y -= 1.0;\n"
+    "  gl_Position = mvp * vec4( pos, 1.0 );\n"
     "  vTexCoord = aTexCoord;\n"
     "}\n\0",
 
@@ -904,9 +911,10 @@ void RenderManager::SetupVRMode()
     "varying mediump vec2 vTexCoord;\n"
     "void main()\n"
     "{ \n"
-    "  mediump vec4 mulcol = vec4( 1.0, 0.0, 0.0, 1.0 );\n"
-    "  if(vTexCoord.y < 0.5 ) { mulcol = vec4(0.0, 1.0, 0.0, 1.0); }\n"
-    "  gl_FragColor = texture2D( texSampler, vTexCoord ) * mulcol;\n"
+//    "  mediump vec4 mulcol = vec4( 1.0, 0.5, 0.5, 1.0 );\n"
+//    "  if(vTexCoord.y < 0.5 ) { mulcol = vec4(0.5, 1.0, 0.5, 1.0); }\n"
+//    "  gl_FragColor = texture2D( texSampler, vTexCoord ) * mulcol;\n"
+    "  gl_FragColor = texture2D( texSampler, vTexCoord );\n"
     "}\n\0",
   };
 
@@ -926,27 +934,28 @@ void RenderManager::SetupVRMode()
   GL( mImpl->context.LinkProgram( program) );
 
   vr.mainVRProgramGL = program;
-  const float w = 1.0f;//(float)mImpl->defaultSurfaceRect.width;
-  const float h = 1.0f;//(float)mImpl->defaultSurfaceRect.height;
+  //const float w = 1.0f;//(float)mImpl->defaultSurfaceRect.width;
+  //const float h = 1.0f;//(float)mImpl->defaultSurfaceRect.height;
 
   // create vertex buffer
-  VrImpl::Vertex vertices[] =
-  {
-    { { -w, -h, 0.0f },        { 0.0f, 0.0f } },
-    { {  w, -h, 0.0f },        { 1.0f, 0.0f } },
-    { {  w,  h, 0.0f },        { 1.0f, 1.0f } },
-    { { -w, -h, 0.0f },        { 0.0f, 0.0f } },
-    { {  w,  h, 0.0f },        { 1.0f, 1.0f } },
-    { { -w,  h, 0.0f },        { 0.0f, 1.0f } },
-  };
+  std::vector<float> vertices;
+  std::vector<uint16_t> indices;
+  GenerateGridVertexBuffer( vertices );
+  GenerateGridIndexBuffer( indices );
 
+  // vertex buffer
   GL( ctx.GenBuffers( 1, &vr.vertexBuffer ) );
   GL( ctx.BindArrayBuffer( vr.vertexBuffer ) );
-  GL( ctx.BufferData( GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW ) );
+  GL( ctx.BufferData( GL_ARRAY_BUFFER, vertices.size()*sizeof(float), vertices.data(), GL_STATIC_DRAW ) );
+
+  // index buffer
+  GL( ctx.GenBuffers( 1, &vr.indexBuffer ) );
+  GL( ctx.BindArrayBuffer( vr.indexBuffer ) );
+  GL( ctx.BufferData( GL_ARRAY_BUFFER, indices.size()*sizeof(uint16_t), indices.data(), GL_STATIC_DRAW ) );
+  vr.indicesCount = indices.size();
 
   GL( vr.uniformLocations[ VrImpl::VR_UNIFORM_MVP ] = ctx.GetUniformLocation( program, "mvp" ) );
   GL( vr.uniformLocations[ VrImpl::VR_UNIFORM_TEXTURE ] = ctx.GetUniformLocation( program, "texSampler" ) );
-
 
   // mvp
   Matrix proj, view;
@@ -987,6 +996,9 @@ void RenderManager::RenderVR()
   GL( ctx.VertexAttribPointer( 1, 2, GL_FLOAT, GL_FALSE, sizeof(VrImpl::Vertex), (const void*)(sizeof(float)*3)) );
   GL( gl.EnableVertexAttribArray( 0 ) );
   GL( gl.EnableVertexAttribArray( 1 ) );
+
+  GL( ctx.BindElementArrayBuffer( vr.indexBuffer ) );
+
   // uniforms
   // texture
   GL( ctx.ActiveTexture( TEXTURE_UNIT_IMAGE ) );
@@ -997,7 +1009,7 @@ void RenderManager::RenderVR()
   GL( gl.UniformMatrix4fv( vr.uniformLocations[ VrImpl::VR_UNIFORM_MVP ],
       1, GL_FALSE, vr.MVP.AsFloat() ) );
 
-  GL( gl.DrawArrays( GL_TRIANGLES, 0, 6 ) );
+  GL( gl.DrawElements( GL_TRIANGLES, vr.indicesCount, GL_UNSIGNED_SHORT, 0 ) );
 
   if( program )
     program->Use();

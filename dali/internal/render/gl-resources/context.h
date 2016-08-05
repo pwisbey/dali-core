@@ -413,14 +413,12 @@ public:
    */
   void Clear(GLbitfield mask, ClearMode mode )
   {
-    DALI_LOG_ERROR("CLEARRRR\n");
     bool forceClear = (mode == FORCE_CLEAR );
     mask = mFrameBufferStateCache.GetClearMask( mask, forceClear , mScissorTestEnabled );
 
     if( mask > 0 )
     {
       LOG_GL("Clear %d\n", mask);
-      DALI_LOG_ERROR(" >>> CLEARRRR for sure\n");
       CHECK_GL( mGlAbstraction, mGlAbstraction.Clear( mask ) );
     }
   }
