@@ -62,6 +62,17 @@ class SystemOverlay;
 class CameraActor;
 class RenderTaskList;
 
+#if 0
+namespace
+{
+struct StereoInfo
+{
+  Dali::RenderTask renderTask;
+  IntrusivePtr<CameraActor> camera;
+};
+}
+#endif
+
 /**
  * Implementation of Stage
  */
@@ -457,10 +468,14 @@ private:
   // The list of render-tasks
   IntrusivePtr<RenderTaskList> mRenderTaskList;
 
-  Dali::RenderTask mRightRenderTask;
-  IntrusivePtr<CameraActor> mRightCamera;
-  Dali::RenderTask mLeftRenderTask;
-  IntrusivePtr<CameraActor> mLeftCamera;
+
+  //TODOVR
+  struct StereoInfo
+  {
+    Dali::RenderTask renderTask;
+    IntrusivePtr<CameraActor> camera;
+  };
+  StereoInfo mStereoInfo[2];
 
   Integration::SystemOverlay* mSystemOverlay; ///< SystemOverlay stage access
 

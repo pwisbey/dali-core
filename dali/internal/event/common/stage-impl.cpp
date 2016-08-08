@@ -39,6 +39,7 @@
 #include <dali/public-api/events/touch-data.h>
 #include <dali/public-api/object/type-registry.h>
 #include <dali/public-api/render-tasks/render-task-list.h>
+#include <iostream> //TODOVR
 
 using Dali::Internal::SceneGraph::Node;
 
@@ -51,7 +52,16 @@ namespace Internal
 namespace
 {
 
-const float DEFAULT_STEREO_BASE( 65.0f );
+//TODOVR
+enum Eye
+{
+  LEFT,
+  RIGHT
+};
+
+//TODOVR
+const float DEFAULT_STEREO_BASE( 10.0f );
+//const float DEFAULT_STEREO_BASE( 15.0f );
 
 // Signals
 
@@ -301,31 +311,33 @@ void Stage::SetViewMode( ViewMode viewMode )
   {
     DALI_LOG_INFO( Debug::Filter::gActor, Debug::Concise, "View mode changed from %d to %d\n", mViewMode, viewMode);
 
+    // Clean up previous mode.
     if( mViewMode == MONO )
     {
       mDefaultCamera->SetOrientation( Dali::ANGLE_180, Vector3::YAXIS );
       mRenderTaskList->GetTask(0).SetSourceActor( Dali::Actor() );
 
-      //Create camera and RenderTask for left eye
-      mLeftCamera = CameraActor::New( Size::ZERO );
-      mLeftCamera->SetParentOrigin( ParentOrigin::CENTER );
-      mDefaultCamera->Add( *mLeftCamera.Get() );
-      mLeftRenderTask = mRenderTaskList->CreateTask();
-      mLeftRenderTask.SetCameraActor( Dali::CameraActor( mLeftCamera.Get() ) );
-      mLeftCamera->SetType( Dali::Camera::FREE_LOOK );
+      // Create camera and RenderTask for left eye
+      mStereoInfo[LEFT].camera = CameraActor::New( Size::ZERO );
+      mStereoInfo[LEFT].camera->SetParentOrigin( ParentOrigin::CENTER );
+      mDefaultCamera->Add( *mStereoInfo[LEFT].camera.Get() );
+      mStereoInfo[LEFT].renderTask = mRenderTaskList->CreateTask();
+      mStereoInfo[LEFT].renderTask.SetClearColor( Vector4( 1.0f, 0.0f, 0.0f, 1.0f ) );
+      mStereoInfo[LEFT].renderTask.SetCameraActor( Dali::CameraActor( mStereoInfo[LEFT].camera.Get() ) );
+      mStereoInfo[LEFT].camera->SetType( Dali::Camera::FREE_LOOK );
 
-      //Create camera and RenderTask for right eye
-      mRightCamera = CameraActor::New( Size::ZERO );
-      mRightCamera->SetParentOrigin( ParentOrigin::CENTER );
-      mDefaultCamera->Add( *mRightCamera.Get() );
-      mRightRenderTask = mRenderTaskList->CreateTask();
-      mRightRenderTask.SetClearColor( Vector4( 1.0f,0.0f,0.0f,1.0f));
+      // Create camera and RenderTask for right eye
+      mStereoInfo[RIGHT].camera = CameraActor::New( Size::ZERO );
+      mStereoInfo[RIGHT].camera->SetParentOrigin( ParentOrigin::CENTER );
+      mDefaultCamera->Add( *mStereoInfo[RIGHT].camera.Get() );
+      mStereoInfo[RIGHT].renderTask = mRenderTaskList->CreateTask();
+      mStereoInfo[RIGHT].renderTask.SetClearColor( Vector4( 1.0f, 0.0f, 0.0f, 1.0f ) );
 
-      mRightRenderTask.SetCameraActor( Dali::CameraActor( mRightCamera.Get() ) );
-      mRightCamera->SetType( Dali::Camera::FREE_LOOK );
+      mStereoInfo[RIGHT].renderTask.SetCameraActor( Dali::CameraActor( mStereoInfo[RIGHT].camera.Get() ) );
+      mStereoInfo[RIGHT].camera->SetType( Dali::Camera::FREE_LOOK );
     }
 
-    // save new mode
+    // Save new mode
     mViewMode = viewMode;
 
     switch( viewMode )
@@ -333,68 +345,125 @@ void Stage::SetViewMode( ViewMode viewMode )
       case MONO:
       {
         // delete extra stereoscopic render tasks and cameras
-        mRenderTaskList->RemoveTask( mLeftRenderTask );
-        mDefaultCamera->Remove( *mLeftCamera.Get() );
-        mLeftRenderTask.Reset();
-        mLeftCamera.Reset();
-        mRenderTaskList->RemoveTask( mRightRenderTask );
-        mDefaultCamera->Remove( *mRightCamera.Get() );
-        mRightRenderTask.Reset();
-        mRightCamera.Reset();
+        mRenderTaskList->RemoveTask( mStereoInfo[LEFT].renderTask );
+        mDefaultCamera->Remove( *mStereoInfo[LEFT].camera.Get() );
+        mStereoInfo[LEFT].renderTask.Reset();
+        mStereoInfo[LEFT].camera.Reset();
+        mRenderTaskList->RemoveTask( mStereoInfo[RIGHT].renderTask );
+        mDefaultCamera->Remove( *mStereoInfo[RIGHT].camera.Get() );
+        mStereoInfo[RIGHT].renderTask.Reset();
+        mStereoInfo[RIGHT].camera.Reset();
         mDefaultCamera->SetOrientation( Dali::ANGLE_0, Vector3::YAXIS );
         mDefaultCamera->SetType( Dali::Camera::LOOK_AT_TARGET );
-        mRenderTaskList->GetTask(0).SetSourceActor( Dali::Layer(mRootLayer.Get()) );
+        mRenderTaskList->GetTask( 0 ).SetSourceActor( Dali::Layer( mRootLayer.Get() ) );
 
         break;
       }
       case STEREO_HORIZONTAL:
       {
-        //Stereo mode with horizontal split is for landscape mode. That's the reason for the cameras being rotated
-        //Top camera renders the scene as seen from the right eye and bottom camera as seen from left.
+        // Stereo mode with horizontal split is for landscape mode. That's the reason for the cameras being rotated
+        // Top camera renders the scene as seen from the right eye and bottom camera as seen from left.
 
-        //Calculate separation in pixels along vertical axis ( mStereoBase is defined in millimetres )
-        const float stereoBase( ( (mStereoBase / 25.4f) * GetDpi().y ) * 0.5f );
+        // Calculate separation in pixels along vertical axis ( mStereoBase is defined in millimetres )
+        const float stereoBase( ( ( mStereoBase / 25.4f ) * GetDpi().y ) * 0.5f );
 
-        //Calculate aspect ratio
-        float aspect = mSize.width / (mSize.height * 0.5f);
+        // Calculate aspect ratio
+        float aspect = mSize.width / ( mSize.height * 0.5f );
 
-        mLeftCamera->SetPerspectiveProjection( mSize, Vector2( 0.0f,stereoBase) );
-        mLeftCamera->SetAspectRatio( aspect );
+        mStereoInfo[LEFT].camera->SetPerspectiveProjection( mSize, Vector2( 0.0f, stereoBase) );
+        mStereoInfo[LEFT].camera->SetAspectRatio( aspect );
 
-        mLeftCamera->SetOrientation( -Dali::ANGLE_90, Vector3::ZAXIS );
-        mLeftCamera->SetPosition( Vector3( stereoBase, 0.0f, 0.0f ) );
-        mLeftRenderTask.SetViewport( Viewport(0, mSize.height * 0.5f, mSize.width, mSize.height * 0.5f) );
+        mStereoInfo[LEFT].camera->SetOrientation( -Dali::ANGLE_90, Vector3::ZAXIS );
+        mStereoInfo[LEFT].camera->SetPosition( Vector3( stereoBase, 0.0f, 0.0f ) );
+        mStereoInfo[LEFT].renderTask.SetViewport( Viewport(0, mSize.height * 0.5f, mSize.width, mSize.height * 0.5f ) );
 
-        mRightCamera->SetPerspectiveProjection( mSize, Vector2( 0.0,  -stereoBase) );
-        mRightCamera->SetAspectRatio( aspect );
-        mRightCamera->SetOrientation( -Dali::ANGLE_90, Vector3::ZAXIS );
-        mRightCamera->SetPosition( Vector3(-stereoBase, 0.0f, 0.0f ) );
-        mRightRenderTask.SetViewport( Viewport(0, 0, mSize.width, mSize.height * 0.5f ) );
+        mStereoInfo[RIGHT].camera->SetPerspectiveProjection( mSize, Vector2( 0.0,  -stereoBase) );
+        mStereoInfo[RIGHT].camera->SetAspectRatio( aspect );
+        mStereoInfo[RIGHT].camera->SetOrientation( -Dali::ANGLE_90, Vector3::ZAXIS );
+        mStereoInfo[RIGHT].camera->SetPosition( Vector3( -stereoBase, 0.0f, 0.0f ) );
+        mStereoInfo[RIGHT].renderTask.SetViewport( Viewport( 0, 0, mSize.width, mSize.height * 0.5f ) );
 
         break;
       }
       case STEREO_VERTICAL:
       {
-        //Calculate separation in pixels along horizontal axis
-        const float stereoBase( ( (mStereoBase / 25.4f) * GetDpi().x ) * 0.5f );
+        // Calculate separation in pixels along horizontal axis
+        const float stereoBase( ( ( mStereoBase / 25.4f ) * GetDpi().x ) * 0.5f );
 
-        //Recalculate fov based on viewport size
-        const float fov = 2.0f * std::atan(  mSize.y / (2.0f * std::max( mSize.x*0.5f, mSize.y )) );
+        // Recalculate fov based on viewport size
+        const float fov = 2.0f * std::atan( mSize.y / ( 2.0f * std::max( mSize.x * 0.5f, mSize.y ) ) );
 
-        mLeftCamera->SetPerspectiveProjection( Size( mSize.x * 0.5f, mSize.y ), Vector2(stereoBase,0.0f) );
-        mLeftCamera->SetFieldOfView( fov );
-        mLeftCamera->SetOrientation( Dali::ANGLE_0, Vector3::ZAXIS );
-        mLeftCamera->SetPosition( Vector3( stereoBase, 0.0f, 0.0f ) );
-        mLeftRenderTask.SetViewport( Viewport(0, 0, mSize.width * 0.5f, mSize.height ) );
+        mStereoInfo[LEFT].camera->SetPerspectiveProjection( Size( mSize.x * 0.5f, mSize.y ), Vector2( stereoBase,0.0f ) );
+        mStereoInfo[LEFT].camera->SetFieldOfView( fov );
+        mStereoInfo[LEFT].camera->SetOrientation( Dali::ANGLE_0, Vector3::ZAXIS );
+        mStereoInfo[LEFT].camera->SetPosition( Vector3( stereoBase, 0.0f, 0.0f ) );
+        mStereoInfo[LEFT].renderTask.SetViewport( Viewport(0, 0, mSize.width * 0.5f, mSize.height ) );
 
-        mRightCamera->SetPerspectiveProjection( Size( mSize.x * 0.5f, mSize.y ), Vector2(-stereoBase,0.0f) );
-        mRightCamera->SetFieldOfView( fov );
-        mRightCamera->SetOrientation( Dali::ANGLE_0, Vector3::ZAXIS );
-        mRightCamera->SetPosition( Vector3( -stereoBase, 0.0f, 0.0f ) );
-        mRightRenderTask.SetViewport( Viewport(mSize.width * 0.5f, 0, mSize.width * 0.5f, mSize.height ) );
+        mStereoInfo[RIGHT].camera->SetPerspectiveProjection( Size( mSize.x * 0.5f, mSize.y ), Vector2( -stereoBase,0.0f ) );
+        mStereoInfo[RIGHT].camera->SetFieldOfView( fov );
+        mStereoInfo[RIGHT].camera->SetOrientation( Dali::ANGLE_0, Vector3::ZAXIS );
+        mStereoInfo[RIGHT].camera->SetPosition( Vector3( -stereoBase, 0.0f, 0.0f ) );
+        mStereoInfo[RIGHT].renderTask.SetViewport( Viewport( mSize.width * 0.5f, 0, mSize.width * 0.5f, mSize.height ) );
 
         break;
       }
+      case VR:
+      {
+        const float pixelAspect = GetDpi().y / GetDpi().x;
+
+        if( mSize.width > mSize.height )
+        {
+         // Stereo mode with horizontal split is for landscape mode. That's the reason for the cameras being rotated
+         // Top camera renders the scene as seen from the right eye and bottom camera as seen from left.
+         // Calculate separation in pixels along vertical axis ( mStereoBase is defined in millimetres )
+
+         // Precalculations:
+         const float stereoBase( ( ( mStereoBase / 25.4f ) * GetDpi().x ) * 0.5f );
+         const float sizeX = mSize.y / pixelAspect;
+         const float viewPortWidth = mSize.x / 2.0f;
+         const float cameraAspect = pixelAspect / ( sizeX / viewPortWidth );
+
+         mStereoInfo[LEFT].camera->SetPerspectiveProjection( Size( sizeX, mSize.height ), Vector2( stereoBase, 0.0f ) );
+         mStereoInfo[LEFT].camera->SetAspectRatio( cameraAspect );
+         mStereoInfo[LEFT].camera->SetOrientation( Dali::ANGLE_0, Vector3::ZAXIS );
+         mStereoInfo[LEFT].camera->SetPosition( Vector3( stereoBase, 0.0f, 0.0f ) );
+         mStereoInfo[LEFT].renderTask.SetViewport( Viewport( 0, 0, viewPortWidth, mSize.height ) );
+
+         mStereoInfo[RIGHT].camera->SetPerspectiveProjection( Size( sizeX, mSize.height ), Vector2( -stereoBase, 0.0f ) );
+         mStereoInfo[RIGHT].camera->SetAspectRatio( cameraAspect );
+         mStereoInfo[RIGHT].camera->SetOrientation( Dali::ANGLE_0, Vector3::ZAXIS );
+         mStereoInfo[RIGHT].camera->SetPosition( Vector3( -stereoBase, 0.0f, 0.0f ) );
+         mStereoInfo[RIGHT].renderTask.SetViewport( Viewport( viewPortWidth, 0, viewPortWidth, mSize.height ) );
+        }
+        else
+        {
+         // Portrait aspect - default to VR on device.
+         // Precalculations:
+         const float stereoBase( ( ( mStereoBase / 25.4f ) * GetDpi().y ) * 0.5f );
+         const float sizeY = mSize.x * pixelAspect;
+         const float viewPortHeight = mSize.y / 2.0f;
+         const float cameraAspect = pixelAspect * ( sizeY / viewPortHeight );
+
+         // Recalculate fov based on viewport size
+         const float fov = std::atan( viewPortHeight / ( 2.0f * mSize.width ) );
+
+         mStereoInfo[LEFT].camera->SetPerspectiveProjection( Size( mSize.width, sizeY ), Vector2( 0.0f, stereoBase ) );
+         mStereoInfo[LEFT].camera->SetAspectRatio( cameraAspect );
+         mStereoInfo[LEFT].camera->SetOrientation( -Dali::ANGLE_90, Vector3::ZAXIS );
+         mStereoInfo[LEFT].camera->SetPosition( Vector3( stereoBase, 0.0f, 0.0f ) );
+         mStereoInfo[LEFT].camera->SetFieldOfView( fov );
+         mStereoInfo[LEFT].renderTask.SetViewport( Viewport( 0, viewPortHeight, mSize.width, viewPortHeight ) );
+
+         mStereoInfo[RIGHT].camera->SetPerspectiveProjection( Size( mSize.width, sizeY ), Vector2( 0.0, -stereoBase ) );
+         mStereoInfo[RIGHT].camera->SetAspectRatio( cameraAspect );
+         mStereoInfo[RIGHT].camera->SetOrientation( -Dali::ANGLE_90, Vector3::ZAXIS );
+         mStereoInfo[RIGHT].camera->SetPosition( Vector3( -stereoBase, 0.0f, 0.0f ) );
+         mStereoInfo[RIGHT].camera->SetFieldOfView( fov );
+         mStereoInfo[RIGHT].renderTask.SetViewport( Viewport( 0, 0, mSize.width, viewPortHeight ) );
+        }
+        break;
+      }
+
       case STEREO_INTERLACED:
       {
         break;
@@ -410,6 +479,7 @@ ViewMode Stage::GetViewMode() const
 
 void Stage::SetStereoBase( float stereoBase )
 {
+  std::cout << "todor: SetStereoBase:" << stereoBase << std::endl;
   if( ! Equals( mStereoBase, stereoBase ) )
   {
     DALI_LOG_INFO( Debug::Filter::gActor, Debug::Concise, "old( %.2f) new(%.2f)\n", mStereoBase, stereoBase );
@@ -417,18 +487,25 @@ void Stage::SetStereoBase( float stereoBase )
 
     switch( mViewMode  )
     {
+      //todor
+      case VR:
+      {
+        // dropthrough
+        // TODOR: Select correct horizontal or vertical base.
+      }
       case STEREO_HORIZONTAL:
       {
+        // TODOVR: move this code so it can be shared with SetViewMode()
         stereoBase = mStereoBase / 25.4f * GetDpi().y * 0.5f;
         float aspect = mSize.width / (mSize.height * 0.5f);
 
-        mLeftCamera->SetPerspectiveProjection( mSize, Vector2( 0.0, stereoBase) );
-        mLeftCamera->SetAspectRatio( aspect );
-        mLeftCamera->SetPosition( Vector3( stereoBase, 0.0f, 0.0f ) );
+        mStereoInfo[LEFT].camera->SetPerspectiveProjection( mSize, Vector2( 0.0, stereoBase) );
+        mStereoInfo[LEFT].camera->SetAspectRatio( aspect );
+        mStereoInfo[LEFT].camera->SetPosition( Vector3( stereoBase, 0.0f, 0.0f ) );
 
-        mRightCamera->SetPerspectiveProjection( mSize, Vector2( 0.0, -stereoBase) );
-        mRightCamera->SetAspectRatio( aspect );
-        mRightCamera->SetPosition( Vector3(-stereoBase, 0.0f, 0.0f ) );
+        mStereoInfo[RIGHT].camera->SetPerspectiveProjection( mSize, Vector2( 0.0, -stereoBase) );
+        mStereoInfo[RIGHT].camera->SetAspectRatio( aspect );
+        mStereoInfo[RIGHT].camera->SetPosition( Vector3(-stereoBase, 0.0f, 0.0f ) );
 
         break;
       }
@@ -437,18 +514,21 @@ void Stage::SetStereoBase( float stereoBase )
         stereoBase = mStereoBase / 25.4f * GetDpi().x * 0.5f;
         const float fov = 2.0f * std::atan(  mSize.y / (2.0f * std::max( mSize.x*0.5f, mSize.y )) );
 
-        mLeftCamera->SetPerspectiveProjection( Size( mSize.x * 0.5f, mSize.y ), Vector2(stereoBase,0.0f) );
-        mLeftCamera->SetFieldOfView( fov );
-        mLeftCamera->SetPosition( Vector3( stereoBase, 0.0f, 0.0f ) );
+        mStereoInfo[LEFT].camera->SetPerspectiveProjection( Size( mSize.x * 0.5f, mSize.y ), Vector2(stereoBase,0.0f) );
+        mStereoInfo[LEFT].camera->SetFieldOfView( fov );
+        mStereoInfo[LEFT].camera->SetPosition( Vector3( stereoBase, 0.0f, 0.0f ) );
 
-        mRightCamera->SetPerspectiveProjection( Size( mSize.x * 0.5f, mSize.y ), Vector2(-stereoBase,0.0f) );
-        mRightCamera->SetFieldOfView( fov );
-        mRightCamera->SetPosition( Vector3(-stereoBase, 0.0f, 0.0f ) );
+        mStereoInfo[RIGHT].camera->SetPerspectiveProjection( Size( mSize.x * 0.5f, mSize.y ), Vector2(-stereoBase,0.0f) );
+        mStereoInfo[RIGHT].camera->SetFieldOfView( fov );
+        mStereoInfo[RIGHT].camera->SetPosition( Vector3(-stereoBase, 0.0f, 0.0f ) );
 
         break;
       }
+
       default:
+      {
         break;
+      }
     }
   }
 }

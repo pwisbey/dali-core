@@ -85,7 +85,7 @@ struct VrImpl
   : mainFrameBufferAttachments( ),
     mainFrameBuffer( 0 ),
     mainVRProgramGL( 0 ),
-    vrModeEnabled( true )
+    vrModeEnabled( false ) //TODOVR
   {
   }
 
