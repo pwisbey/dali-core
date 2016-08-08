@@ -442,6 +442,11 @@ private:
 
 private:
 
+  //TODOVR
+  void UpdateCameras();
+
+private:
+
   // For 'Fire and forget' animation support
   AnimationPlaylist& mAnimationPlaylist;
 
