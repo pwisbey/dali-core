@@ -245,8 +245,15 @@ void Stage::CreateDefaultCameraActor()
   // children of the default layer, can be positioned at (0,0) and
   // be at the top-left of the viewport.
   mDefaultCamera = CameraActor::New( Size::ZERO );
-  mDefaultCamera->SetParentOrigin(ParentOrigin::CENTER);
-  Add(*(mDefaultCamera.Get()));
+  mDefaultCamera->SetParentOrigin( ParentOrigin::CENTER );
+  mDefaultCamera->SetAnchorPoint( AnchorPoint::CENTER );
+  Add( *( mDefaultCamera.Get() ) );
+}
+
+//TODOVR
+Dali::CameraActor Stage::GetCameraActor()
+{
+  return Dali::CameraActor( mDefaultCamera.Get() );
 }
 
 Actor& Stage::GetDefaultRootActor()
@@ -332,7 +339,6 @@ void Stage::SetViewMode( ViewMode viewMode )
       mDefaultCamera->Add( *mStereoInfo[RIGHT].camera.Get() );
       mStereoInfo[RIGHT].renderTask = mRenderTaskList->CreateTask();
       mStereoInfo[RIGHT].renderTask.SetClearColor( Vector4( 1.0f, 0.0f, 0.0f, 1.0f ) );
-
       mStereoInfo[RIGHT].renderTask.SetCameraActor( Dali::CameraActor( mStereoInfo[RIGHT].camera.Get() ) );
       mStereoInfo[RIGHT].camera->SetType( Dali::Camera::FREE_LOOK );
     }
@@ -372,12 +378,11 @@ void Stage::SetViewMode( ViewMode viewMode )
 
         mStereoInfo[LEFT].camera->SetPerspectiveProjection( mSize, Vector2( 0.0f, stereoBase) );
         mStereoInfo[LEFT].camera->SetAspectRatio( aspect );
-
         mStereoInfo[LEFT].camera->SetOrientation( -Dali::ANGLE_90, Vector3::ZAXIS );
         mStereoInfo[LEFT].camera->SetPosition( Vector3( stereoBase, 0.0f, 0.0f ) );
         mStereoInfo[LEFT].renderTask.SetViewport( Viewport(0, mSize.height * 0.5f, mSize.width, mSize.height * 0.5f ) );
 
-        mStereoInfo[RIGHT].camera->SetPerspectiveProjection( mSize, Vector2( 0.0,  -stereoBase) );
+        mStereoInfo[RIGHT].camera->SetPerspectiveProjection( mSize, Vector2( 0.0, -stereoBase) );
         mStereoInfo[RIGHT].camera->SetAspectRatio( aspect );
         mStereoInfo[RIGHT].camera->SetOrientation( -Dali::ANGLE_90, Vector3::ZAXIS );
         mStereoInfo[RIGHT].camera->SetPosition( Vector3( -stereoBase, 0.0f, 0.0f ) );
@@ -423,13 +428,16 @@ void Stage::SetViewMode( ViewMode viewMode )
          const float viewPortWidth = mSize.x / 2.0f;
          const float cameraAspect = pixelAspect / ( sizeX / viewPortWidth );
 
-         mStereoInfo[LEFT].camera->SetPerspectiveProjection( Size( sizeX, mSize.height ), Vector2( stereoBase, 0.0f ) );
+         // We should not alter the frustums based on eye separation.
+         mStereoInfo[LEFT].camera->SetPerspectiveProjection( Size( sizeX, mSize.height ), Vector2::ZERO );
+         //mStereoInfo[LEFT].camera->SetPerspectiveProjection( Size( sizeX, mSize.height ), Vector2( stereoBase, 0.0f ) );
          mStereoInfo[LEFT].camera->SetAspectRatio( cameraAspect );
          mStereoInfo[LEFT].camera->SetOrientation( Dali::ANGLE_0, Vector3::ZAXIS );
          mStereoInfo[LEFT].camera->SetPosition( Vector3( stereoBase, 0.0f, 0.0f ) );
          mStereoInfo[LEFT].renderTask.SetViewport( Viewport( 0, 0, viewPortWidth, mSize.height ) );
 
-         mStereoInfo[RIGHT].camera->SetPerspectiveProjection( Size( sizeX, mSize.height ), Vector2( -stereoBase, 0.0f ) );
+         mStereoInfo[RIGHT].camera->SetPerspectiveProjection( Size( sizeX, mSize.height ), Vector2( 0.0f, 0.0f ) );
+         //mStereoInfo[RIGHT].camera->SetPerspectiveProjection( Size( sizeX, mSize.height ), Vector2( -stereoBase, 0.0f ) );
          mStereoInfo[RIGHT].camera->SetAspectRatio( cameraAspect );
          mStereoInfo[RIGHT].camera->SetOrientation( Dali::ANGLE_0, Vector3::ZAXIS );
          mStereoInfo[RIGHT].camera->SetPosition( Vector3( -stereoBase, 0.0f, 0.0f ) );
@@ -447,14 +455,16 @@ void Stage::SetViewMode( ViewMode viewMode )
          // Recalculate fov based on viewport size
          const float fov = std::atan( viewPortHeight / ( 2.0f * mSize.width ) );
 
-         mStereoInfo[LEFT].camera->SetPerspectiveProjection( Size( mSize.width, sizeY ), Vector2( 0.0f, stereoBase ) );
+         mStereoInfo[LEFT].camera->SetPerspectiveProjection( Size( mSize.width, sizeY ), Vector2::ZERO );
+         //mStereoInfo[LEFT].camera->SetPerspectiveProjection( Size( mSize.width, sizeY ), Vector2( 0.0f, stereoBase ) );
          mStereoInfo[LEFT].camera->SetAspectRatio( cameraAspect );
          mStereoInfo[LEFT].camera->SetOrientation( -Dali::ANGLE_90, Vector3::ZAXIS );
          mStereoInfo[LEFT].camera->SetPosition( Vector3( stereoBase, 0.0f, 0.0f ) );
          mStereoInfo[LEFT].camera->SetFieldOfView( fov );
          mStereoInfo[LEFT].renderTask.SetViewport( Viewport( 0, viewPortHeight, mSize.width, viewPortHeight ) );
 
-         mStereoInfo[RIGHT].camera->SetPerspectiveProjection( Size( mSize.width, sizeY ), Vector2( 0.0, -stereoBase ) );
+         mStereoInfo[RIGHT].camera->SetPerspectiveProjection( Size( mSize.width, sizeY ), Vector2::ZERO );
+         //mStereoInfo[RIGHT].camera->SetPerspectiveProjection( Size( mSize.width, sizeY ), Vector2( 0.0, -stereoBase ) );
          mStereoInfo[RIGHT].camera->SetAspectRatio( cameraAspect );
          mStereoInfo[RIGHT].camera->SetOrientation( -Dali::ANGLE_90, Vector3::ZAXIS );
          mStereoInfo[RIGHT].camera->SetPosition( Vector3( -stereoBase, 0.0f, 0.0f ) );
@@ -470,6 +480,26 @@ void Stage::SetViewMode( ViewMode viewMode )
       }
     }
   }
+
+
+  //TODOVR: Animate the look angle for testing.
+#if 0
+  Quaternion q = mDefaultCamera->GetCurrentOrientation();
+
+  float duration = 3.0f;
+  mCamAnim = Dali::Animation::New( duration );
+
+  Dali::CameraActor a = Dali::CameraActor( ( mDefaultCamera.Get() ) );
+
+  float lookAngle = 20.0f;
+  mDefaultCamera->SetOrientation( Degree( ( 180.0f - ( lookAngle / 2.0f ) ) ), Vector3::YAXIS );
+
+  mCamAnim.AnimateBy( Dali::Property( a, Dali::Actor::Property::ORIENTATION ), Quaternion( Radian( Degree( lookAngle ) ), Vector3::YAXIS ), AlphaFunction::EASE_IN_OUT, TimePeriod( 0.0f, duration / 2.0f ) );
+  mCamAnim.AnimateBy( Dali::Property( a, Dali::Actor::Property::ORIENTATION ), Quaternion( Radian( Degree( -lookAngle ) ), Vector3::YAXIS ), AlphaFunction::EASE_IN_OUT, TimePeriod( duration / 2.0f, duration / 2.0f )  );
+  mCamAnim.SetLooping( true );
+
+  mDefaultCamera->SetOrientation( Radian( Math::PI * 0.95f ), Vector3::YAXIS );
+#endif
 }
 
 ViewMode Stage::GetViewMode() const

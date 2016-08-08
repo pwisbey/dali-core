@@ -1,8 +1,8 @@
-#ifndef __DALI_STAGE_H__
-#define __DALI_STAGE_H__
+#ifndef DALI_STAGE_H
+#define DALI_STAGE_H
 
 /*
- * Copyright (c) 2015 Samsung Electronics Co., Ltd.
+ * Copyright (c) 2016 Samsung Electronics Co., Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,6 +39,7 @@ class Layer;
 class ObjectRegistry;
 class TouchData;
 class RenderTaskList;
+class CameraActor;
 struct Vector2;
 struct Vector3;
 struct Vector4;
@@ -234,6 +235,9 @@ public:
    */
   ObjectRegistry GetObjectRegistry() const;
 
+  //TODOVR: For testing only.
+  Dali::CameraActor GetCameraActor();
+
   // Rendering
 
   /**
@@ -370,4 +374,4 @@ public: // Not intended for application developers
 
 } // namespace Dali
 
-#endif // __DALI_STAGE_H__
+#endif // DALI_STAGE_H

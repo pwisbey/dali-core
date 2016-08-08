@@ -185,6 +185,13 @@ public:
    */
   virtual CameraActor& GetDefaultCameraActor();
 
+  /**
+   * TODOVR
+   * Retrieve the main camera actor.
+   * @return The default camera actor.
+   */
+  Dali::CameraActor GetCameraActor();
+
   // Layers
 
   /**
@@ -456,6 +463,8 @@ private:
   OwnerPointer<LayerList> mLayerList;
 
   IntrusivePtr<CameraActor> mDefaultCamera;
+
+  Dali::Animation mCamAnim;//TODOVR
 
   ViewMode mViewMode;
   float mStereoBase;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Samsung Electronics Co., Ltd.
+ * Copyright (c) 2016 Samsung Electronics Co., Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@
 #include <dali/internal/common/core-impl.h>
 #include <dali/public-api/actors/layer.h>
 #include <dali/public-api/object/object-registry.h>
+#include <dali/public-api/actors/camera-actor.h>
 
 namespace Dali
 {
@@ -127,6 +128,12 @@ ObjectRegistry Stage::GetObjectRegistry() const
 
   Internal::ObjectRegistry& internal = stage->GetObjectRegistry();
   return ObjectRegistry(&internal);
+}
+
+//TODOVR
+Dali::CameraActor Stage::GetCameraActor()
+{
+  return GetImplementation(*this).GetCameraActor();
 }
 
 void Stage::KeepRendering( float durationSeconds )
