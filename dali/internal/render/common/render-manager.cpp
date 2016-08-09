@@ -42,9 +42,13 @@
 #include <dali/internal/render/renderers/render-sampler.h>
 #include <dali/internal/render/shaders/program-controller.h>
 
+//TODOVR
 #include <dali/internal/render/common/renderer-vr.h>
-
 #include <cstdio>
+
+//TODOVR
+//#define DEBUG_DISABLE_BARREL_DISTORTION
+
 namespace Dali
 {
 
@@ -85,7 +89,7 @@ struct VrImpl
   : mainFrameBufferAttachments( ),
     mainFrameBuffer( 0 ),
     mainVRProgramGL( 0 ),
-    vrModeEnabled( false ) //TODOVR
+    vrModeEnabled( true ) //TODOVR
   {
   }
 
@@ -639,8 +643,6 @@ bool RenderManager::Render( Integration::RenderStatus& status )
     {
       RenderVR();
     }
-
-
   }
 
   //Notify RenderGeometries that rendering has finished
@@ -720,8 +722,6 @@ void RenderManager::DoRender( RenderInstruction& instruction, Shader& defaultSha
   }
   else // !(instruction.mOffscreenTexture)
   {
-
-
     // switch rendering to adaptor provided (default) buffer
     mImpl->context.BindFramebuffer( GL_FRAMEBUFFER, mImpl->vrImpl.vrModeEnabled ? mImpl->vrImpl.mainFrameBuffer : 0 );
 
@@ -777,22 +777,6 @@ void RenderManager::DoRender( RenderInstruction& instruction, Shader& defaultSha
     instruction.mRenderTracker = NULL; // Only create once.
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 namespace {
 inline void Orthographic(Matrix& result, float left, float right, float bottom, float top, float near, float far, bool invertYAxis)
@@ -911,10 +895,13 @@ void RenderManager::SetupVRMode()
     "varying mediump vec2 vTexCoord;\n"
     "void main()\n"
     "{ \n"
-//    "  mediump vec4 mulcol = vec4( 1.0, 0.5, 0.5, 1.0 );\n"
-//    "  if(vTexCoord.y < 0.5 ) { mulcol = vec4(0.5, 1.0, 0.5, 1.0); }\n"
-//    "  gl_FragColor = texture2D( texSampler, vTexCoord ) * mulcol;\n"
+#ifdef DEBUG_DISABLE_BARREL_DISTORTION
+    "  mediump vec4 mulcol = vec4( 1.0, 0.0, 0.0, 1.0 );\n"
+    "  if( vTexCoord.y < 0.5 ) { mulcol = vec4( 0.0, 1.0, 0.0, 1.0 ); }\n"
+    "  gl_FragColor = texture2D( texSampler, vTexCoord ) * mulcol;\n"
+#else
     "  gl_FragColor = texture2D( texSampler, vTexCoord );\n"
+#endif
     "}\n\0",
   };
 
@@ -934,9 +921,26 @@ void RenderManager::SetupVRMode()
   GL( mImpl->context.LinkProgram( program) );
 
   vr.mainVRProgramGL = program;
-  //const float w = 1.0f;//(float)mImpl->defaultSurfaceRect.width;
-  //const float h = 1.0f;//(float)mImpl->defaultSurfaceRect.height;
 
+#ifdef DEBUG_DISABLE_BARREL_DISTORTION
+  const float w = 1.0f;//(float)mImpl->defaultSurfaceRect.width;
+  const float h = 1.0f;//(float)mImpl->defaultSurfaceRect.height;
+
+  // create vertex buffer
+  VrImpl::Vertex vertices[] =
+  {
+    { { -w, -h, 0.0f },        { 0.0f, 0.0f } },
+    { {  w, -h, 0.0f },        { 1.0f, 0.0f } },
+    { {  w,  h, 0.0f },        { 1.0f, 1.0f } },
+    { { -w, -h, 0.0f },        { 0.0f, 0.0f } },
+    { {  w,  h, 0.0f },        { 1.0f, 1.0f } },
+    { { -w,  h, 0.0f },        { 0.0f, 1.0f } },
+  };
+
+  GL( ctx.GenBuffers( 1, &vr.vertexBuffer ) );
+  GL( ctx.BindArrayBuffer( vr.vertexBuffer ) );
+  GL( ctx.BufferData( GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW ) );
+#else
   // create vertex buffer
   std::vector<float> vertices;
   std::vector<uint16_t> indices;
@@ -953,6 +957,7 @@ void RenderManager::SetupVRMode()
   GL( ctx.BindArrayBuffer( vr.indexBuffer ) );
   GL( ctx.BufferData( GL_ARRAY_BUFFER, indices.size()*sizeof(uint16_t), indices.data(), GL_STATIC_DRAW ) );
   vr.indicesCount = indices.size();
+#endif
 
   GL( vr.uniformLocations[ VrImpl::VR_UNIFORM_MVP ] = ctx.GetUniformLocation( program, "mvp" ) );
   GL( vr.uniformLocations[ VrImpl::VR_UNIFORM_TEXTURE ] = ctx.GetUniformLocation( program, "texSampler" ) );
@@ -968,7 +973,6 @@ void RenderManager::SetupVRMode()
   //vr.MVP.Multiply( vr.MVP, vp, mat );
   return;
 }
-
 
 void RenderManager::RenderVR()
 {
@@ -997,7 +1001,9 @@ void RenderManager::RenderVR()
   GL( gl.EnableVertexAttribArray( 0 ) );
   GL( gl.EnableVertexAttribArray( 1 ) );
 
+#ifndef DEBUG_DISABLE_BARREL_DISTORTION
   GL( ctx.BindElementArrayBuffer( vr.indexBuffer ) );
+#endif
 
   // uniforms
   // texture
@@ -1009,11 +1015,14 @@ void RenderManager::RenderVR()
   GL( gl.UniformMatrix4fv( vr.uniformLocations[ VrImpl::VR_UNIFORM_MVP ],
       1, GL_FALSE, vr.MVP.AsFloat() ) );
 
+#ifdef DEBUG_DISABLE_BARREL_DISTORTION
+  GL( gl.DrawArrays( GL_TRIANGLES, 0, 6 ) );
+#else
   GL( gl.DrawElements( GL_TRIANGLES, vr.indicesCount, GL_UNSIGNED_SHORT, 0 ) );
+#endif
 
   if( program )
     program->Use();
-
 }
 
 } // namespace SceneGraph
