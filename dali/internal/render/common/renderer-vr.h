@@ -6,6 +6,8 @@
 #include <stdlib.h>
 #include <vector>
 
+//#define DEBUG_USE_HORIZONTAL_GEOMETRY
+
 namespace
 {
 
@@ -465,19 +467,33 @@ inline void GenerateGridVertexBuffer( std::vector<float>& vertexBuffer )
   {
     float* co = &vertexBuffer[i];
     float* uv = &vertexBuffer[i+3];
+
+#ifdef DEBUG_USE_HORIZONTAL_GEOMETRY
+    co[0] *= 0.5f;
+    co[0] -= 0.5f;
+    uv[0] *= 0.5f;
+#else
     co[1] -= 1.0f;
     co[1] *= 0.5f;
     uv[1] *= 0.5f;
+#endif
   }
 
   for( size_t i = N; i < N*2; i += 5 )
   {
     float* co = &vertexBuffer[i];
     float* uv = &vertexBuffer[i+3];
+
+#ifdef DEBUG_USE_HORIZONTAL_GEOMETRY
+    co[0] *= 0.5f;
+    co[0] += 0.5f;
+    uv[0] *= 0.5f;
+#else
     co[1] += 1.0f;
     co[1] *= 0.5f;
     uv[1] += 1.0f;
     uv[1] *= 0.5f;
+#endif
   }
 
   return;
