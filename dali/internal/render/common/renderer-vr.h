@@ -9,7 +9,6 @@
 namespace
 {
 
-
 const float gridVertices[] = {
 	-0.852243, 0.852243, 0.000000, 0.000000, 1.000000,
 	-0.788650, 0.876276, 0.000000, 0.050000, 1.000000,
@@ -461,9 +460,7 @@ inline void GenerateGridVertexBuffer( std::vector<float>& vertexBuffer )
   std::copy( gridVertices, gridVertices+N, vertexBuffer.data() );
   std::copy( gridVertices, gridVertices+N, vertexBuffer.data()+N );
 
-  // process data for both eyes
-
-
+  // Process data for both eyes
   for( size_t i = 0; i < N; i += 5 )
   {
     float* co = &vertexBuffer[i];
@@ -473,15 +470,14 @@ inline void GenerateGridVertexBuffer( std::vector<float>& vertexBuffer )
     uv[1] *= 0.5f;
   }
 
-  //for( size_t i = N; i < N*2; i += 5 )
   for( size_t i = N; i < N*2; i += 5 )
   {
     float* co = &vertexBuffer[i];
     float* uv = &vertexBuffer[i+3];
     co[1] += 1.0f;
     co[1] *= 0.5f;
-    uv[1] *= 0.5f;
     uv[1] += 1.0f;
+    uv[1] *= 0.5f;
   }
 
   return;
