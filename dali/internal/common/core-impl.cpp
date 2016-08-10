@@ -83,10 +83,11 @@ using Integration::GlAbstraction;
 using Integration::Event;
 using Integration::UpdateStatus;
 using Integration::RenderStatus;
+using Integration::GyroscopeSensor;
 
 Core::Core( RenderController& renderController, PlatformAbstraction& platform,
             GlAbstraction& glAbstraction, GlSyncAbstraction& glSyncAbstraction,
-            GestureManager& gestureManager, ResourcePolicy::DataRetention dataRetentionPolicy)
+            GestureManager& gestureManager, GyroscopeSensor* gyroscopeSensor, ResourcePolicy::DataRetention dataRetentionPolicy)
 : mRenderController( renderController ),
   mPlatform(platform),
   mGestureEventProcessor(NULL),
@@ -160,7 +161,7 @@ Core::Core( RenderController& renderController, PlatformAbstraction& platform,
   mRelayoutController = IntrusivePtr< RelayoutController >( new RelayoutController( mRenderController ) );
 
   mStage->Initialize();
-
+  mStage->SetGyroscopeSensor( gyroscopeSensor );
   mResourceClient = new ResourceClient( *mResourceManager, *mStage );
 
   mGestureEventProcessor = new GestureEventProcessor(*mStage, gestureManager, mRenderController);
@@ -169,6 +170,7 @@ Core::Core( RenderController& renderController, PlatformAbstraction& platform,
   mImageFactory = new ImageFactory( *mResourceClient );
   mShaderFactory = new ShaderFactory();
   mUpdateManager->SetShaderSaver( *mShaderFactory );
+  mUpdateManager->SetGyroscopeSensor( *gyroscopeSensor );
   mShaderFactory->LoadDefaultShaders();
 
   GetImplementation(Dali::TypeRegistry::Get()).CallInitFunctions();

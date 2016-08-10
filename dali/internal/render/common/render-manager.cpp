@@ -813,6 +813,7 @@ inline void Orthographic(Matrix& result, float left, float right, float bottom, 
   m[15] = 1.0f;
 }
 
+/*
 void LookAt(Matrix& result, const Vector3& eye, const Vector3& target, const Vector3& up)
 {
   Vector3 vZ = target - eye;
@@ -826,7 +827,7 @@ void LookAt(Matrix& result, const Vector3& eye, const Vector3& target, const Vec
 
   result.SetInverseTransformComponents(vX, vY, vZ, eye);
 }
-
+*/
 }
 
 void RenderManager::SetupVRMode()
@@ -845,8 +846,8 @@ void RenderManager::SetupVRMode()
                              mImpl->defaultSurfaceRect.width,
                              mImpl->defaultSurfaceRect.height,
                              0, GL_RGBA, GL_UNSIGNED_BYTE, 0 ) );
-  GL( ctx.TexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST ) );
-  GL( ctx.TexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST ) );
+  GL( ctx.TexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR ) );
+  GL( ctx.TexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR ) );
   GL( ctx.FramebufferTexture2D( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, vr.mainFrameBufferAttachments[0], 0 ) );
 
   // depth/stencil attachment
@@ -886,7 +887,9 @@ void RenderManager::SetupVRMode()
     "  vec3 pos = aPosition;\n"
     //"  pos.y -= 1.0;\n"
     "  gl_Position = mvp * vec4( pos, 1.0 );\n"
-    "  vTexCoord = aTexCoord;\n"
+    "  mediump vec2 uvs = vec2( aTexCoord );\n"
+//    "  uvs.r = 1.0 - uvs.r;\n"
+    "  vTexCoord = uvs;\n"
     "}\n\0",
 
     // fragment shader
@@ -896,9 +899,13 @@ void RenderManager::SetupVRMode()
     "void main()\n"
     "{ \n"
 #ifdef DEBUG_DISABLE_BARREL_DISTORTION
+#ifdef DEBUG_VR_TINT_EACH_EYE
     "  mediump vec4 mulcol = vec4( 1.0, 0.0, 0.0, 1.0 );\n"
     "  if( vTexCoord.y < 0.5 ) { mulcol = vec4( 0.0, 1.0, 0.0, 1.0 ); }\n"
     "  gl_FragColor = texture2D( texSampler, vTexCoord ) * mulcol;\n"
+#else
+    "  gl_FragColor = texture2D( texSampler, vTexCoord );\n"
+#endif
 #else
     "  gl_FragColor = texture2D( texSampler, vTexCoord );\n"
 #endif
@@ -964,7 +971,11 @@ void RenderManager::SetupVRMode()
 
   // mvp
   Matrix proj, view;
-  Orthographic( proj, 1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, false );
+
+  //float asp = (float)mImpl->defaultSurfaceRect.height / (float)mImpl->defaultSurfaceRect.width;
+
+  float shift = 0.016f;
+  Orthographic( proj, -1.0f, 1.0f, 1.0f+shift, -1.0f+shift, -1.0f, 1.0f, false );
   //LookAt( view, Vector3( 0.0f, 0.0f, 0.0f ), Vector3( 0.0f, 0.0f, 1.0f ), Vector3( 0.0f, 1.0f, 0.0f ) );
   //mat.SetTranslation( Vector3(0.0f, 0.0f, 1.0f ) );
   Matrix::Multiply( vr.MVP, view, proj );
@@ -982,9 +993,13 @@ void RenderManager::RenderVR()
   Integration::GlAbstraction& gl = ctx.GetAbstraction();
   GL( ctx.BindFramebuffer( GL_FRAMEBUFFER, 0 ) );
   gl.Viewport( 0, 0, mImpl->defaultSurfaceRect.width, mImpl->defaultSurfaceRect.height );
-  //gl.Disable( GL_SCISSOR_TEST );
+  ctx.Scissor( 0, 0, mImpl->defaultSurfaceRect.width, mImpl->defaultSurfaceRect.height );
+  //DALI_LOG_ERROR("VR: %d, %d\n", (int) mImpl->defaultSurfaceRect.width, (int) mImpl->defaultSurfaceRect.height);
+
+  gl.Disable( GL_SCISSOR_TEST );
   //gl.Disable( GL_DEPTH_TEST );
-  //gl.ClearColor( 0.0f, f, 0.0f, 1.0f );
+  gl.ClearColor( 1.0f, 0.0f, 0.0f, 1.0f );
+  //gl.Clear( GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT );
   f -= 0.2f;
   if( f < 0 )
     f = 1.0f;
@@ -1019,6 +1034,7 @@ void RenderManager::RenderVR()
   GL( gl.DrawArrays( GL_TRIANGLES, 0, 6 ) );
 #else
   GL( gl.DrawElements( GL_TRIANGLES, vr.indicesCount, GL_UNSIGNED_SHORT, 0 ) );
+
 #endif
 
   if( program )

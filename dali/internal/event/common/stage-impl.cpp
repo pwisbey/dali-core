@@ -59,6 +59,49 @@ enum Eye
   RIGHT
 };
 
+//TODOVR: Gyroscope constraints
+struct GyroEyeConstraint
+{
+  GyroEyeConstraint( Dali::Internal::Stage* stage )
+    : stage( stage )
+  {
+    pitch = Radian(Degree(0.0f));
+    yaw = Radian(Degree(180.0f));
+    roll = Radian(Degree(0.0f));
+  }
+
+  void operator()( Quaternion& current, const PropertyInputContainer& inputs )
+  {
+    // TODO: get gyro data, update rotation
+    // get data from gyroscope
+    Dali::Integration::GyroscopeSensor* sensor( stage->GetGyroscopeSensor() );
+    if( !sensor->IsEnabled() )
+    {
+      sensor->Enable();
+      current.SetEuler( Radian((pitch)), Radian((yaw)), Radian((roll)) );
+    }
+    else
+    {
+      const int packets = 16;
+      Dali::Vector4 accumulated;
+      sensor->ReadPackets( &accumulated, packets );
+      pitch = -accumulated.y;
+      yaw = accumulated.x;
+      roll = accumulated.z;
+      Quaternion rot;
+      rot.SetEuler( Radian((Degree(pitch))), Radian(Degree(yaw)), Radian(Degree(roll)) );
+      current *= rot;
+    }
+    //current = Dali::Quaternion()
+
+  }
+  Dali::Internal::Stage* stage;
+
+  float pitch;
+  float yaw;
+  float roll;
+};
+
 //TODOVR
 const float DEFAULT_STEREO_BASE( 10.0f );
 //const float DEFAULT_STEREO_BASE( 15.0f );
@@ -366,6 +409,7 @@ void Stage::UpdateCameras()
     case VR:
     {
       const float pixelAspect = GetDpi().y / GetDpi().x;
+      float stereoBase( 0.05f );
 
       if( mSize.width > mSize.height )
       {
@@ -390,6 +434,34 @@ void Stage::UpdateCameras()
       }
       else
       {
+
+#if 0
+        // Portrait aspect - default to VR on device.
+        // Precalculations:
+        const float sizeY = mSize.x * pixelAspect;
+        const float viewPortHeight = mSize.y / 2.0f;
+        const float cameraAspect = pixelAspect * ( sizeY / viewPortHeight );
+        const float near = 100.0f;
+        const float far = 5000.0f;
+        // TODOVR: Base this off actual FoV values (EG. 96 degrees for GearVR)
+        // Recalculate fov based on viewport size.
+        const float fov = Radian( Degree(60) );//std::atan( viewPortHeight / ( 2.0f * mSize.width ) );
+
+        mStereoInfo[LEFT].camera->SetPerspectiveProjectionFovY( fov, cameraAspect, near, far, Vector2::ZERO );
+        mStereoInfo[LEFT].camera->SetAspectRatio( cameraAspect );
+        mStereoInfo[LEFT].camera->SetOrientation( -Dali::ANGLE_90, Vector3::ZAXIS );
+        mStereoInfo[LEFT].camera->SetFieldOfView( fov );
+        mStereoInfo[LEFT].renderTask.SetViewport( Viewport( 0, viewPortHeight, mSize.width, viewPortHeight ) );
+
+        mStereoInfo[RIGHT].camera->SetPerspectiveProjectionFovY( fov, cameraAspect, near, far, Vector2::ZERO );
+        mStereoInfo[RIGHT].camera->SetAspectRatio( cameraAspect );
+        mStereoInfo[RIGHT].camera->SetOrientation( -Dali::ANGLE_90, Vector3::ZAXIS );
+        mStereoInfo[RIGHT].camera->SetFieldOfView( fov );
+        mStereoInfo[RIGHT].renderTask.SetViewport( Viewport( 0, 0, mSize.width, viewPortHeight ) );
+
+        mDefaultCamera->SetPosition( 0.0f, 100.0f );
+#endif
+
         // Portrait aspect - default to VR on device.
         // Precalculations:
         const float sizeY = mSize.x * pixelAspect;
@@ -398,27 +470,54 @@ void Stage::UpdateCameras()
 
         // TODOVR: Base this off actual FoV values (EG. 96 degrees for GearVR)
         // Recalculate fov based on viewport size.
-        const float fov = std::atan( viewPortHeight / ( 2.0f * mSize.width ) );
-
-        mStereoInfo[LEFT].camera->SetPerspectiveProjection( Size( mSize.width, sizeY ), Vector2::ZERO );
+        float fov = std::atan( viewPortHeight / ( 2.0f * mSize.width ) );
+        const float far = 300.0f;
+        float IPD = 0.0635f;
+        stereoBase = -IPD*0.5f;
+        const float near = IPD+0.1f;
+        //stereoBase = 0.0f;
+        fov = Radian( Degree(106) );
+        mStereoInfo[LEFT].camera->SetPerspectiveProjectionFovY( fov, cameraAspect, near, far, Vector2( 0.0f, +stereoBase ) );
+        //mStereoInfo[LEFT].camera->SetPerspectiveProjection( Size( mSize.width, sizeY ), Vector2::ZERO );
         //mStereoInfo[LEFT].camera->SetPerspectiveProjection( Size( mSize.width, sizeY ), Vector2( 0.0f, stereoBase ) );
-        mStereoInfo[LEFT].camera->SetAspectRatio( cameraAspect );
-        mStereoInfo[LEFT].camera->SetOrientation( -Dali::ANGLE_90, Vector3::ZAXIS );
-        mStereoInfo[LEFT].camera->SetFieldOfView( fov );
+        //mStereoInfo[LEFT].camera->SetAspectRatio( cameraAspect );
+        //mStereoInfo[LEFT].camera->SetOrientation( -Dali::ANGLE_90, Vector3::ZAXIS );
+        //mStereoInfo[LEFT].camera->SetFieldOfView( fov );
         mStereoInfo[LEFT].renderTask.SetViewport( Viewport( 0, viewPortHeight, mSize.width, viewPortHeight ) );
 
-        mStereoInfo[RIGHT].camera->SetPerspectiveProjection( Size( mSize.width, sizeY ), Vector2::ZERO );
+        //mStereoInfo[RIGHT].camera->SetPerspectiveProjection( Size( mSize.width, sizeY ), Vector2::ZERO );
         //mStereoInfo[RIGHT].camera->SetPerspectiveProjection( Size( mSize.width, sizeY ), Vector2( 0.0, -stereoBase ) );
-        mStereoInfo[RIGHT].camera->SetAspectRatio( cameraAspect );
-        mStereoInfo[RIGHT].camera->SetOrientation( -Dali::ANGLE_90, Vector3::ZAXIS );
-        mStereoInfo[RIGHT].camera->SetFieldOfView( fov );
+        mStereoInfo[RIGHT].camera->SetPerspectiveProjectionFovY( fov, cameraAspect, near, far, Vector2( 0.0f, -stereoBase ) );
+        //mStereoInfo[RIGHT].camera->SetAspectRatio( cameraAspect );
+        //mStereoInfo[RIGHT].camera->SetOrientation( -Dali::ANGLE_90, Vector3::ZAXIS );
+        //mStereoInfo[RIGHT].camera->SetFieldOfView( fov );
         mStereoInfo[RIGHT].renderTask.SetViewport( Viewport( 0, 0, mSize.width, viewPortHeight ) );
+
       }
 
+      // VR camera will be feed from gyroscope input, for now using constraints
+      // Camera needs to check gyroscope state every update, simple constraint will
+      // solve the problem, however we need to keep that 'fake' update running, so that
+      // there's 'infinite' animation running. This way we are able to hit the constraint
+      // every frame and update orientation.
+      mVRGyroEyeConstraint = Constraint::New<Quaternion>( mDefaultCamera.Get(),
+                                                        Dali::Actor::Property::ORIENTATION,
+                                                        GyroEyeConstraint( this ));
+      mVRGyroEyeConstraint.Apply();
+      Dali::Actor actor( mDefaultCamera.Get() );
+      Quaternion quaternion( Radian(Degree(0)), Vector3( 0.0f, 0.0f, 0.0f ));
+      mVRDefaultCameraAnimation = Dali::Animation::New( 1.0f );
+      mVRDefaultCameraAnimation.AnimateBy( Property( actor, Dali::Actor::Property::ORIENTATION ), quaternion, AlphaFunction::LINEAR );
+      mVRDefaultCameraAnimation.SetLooping( true );
+      mVRDefaultCameraAnimation.Play();
+
+      mStereoInfo[LEFT].camera->SetType( Camera::FREE_LOOK );
+      mStereoInfo[RIGHT].camera->SetType( Camera::FREE_LOOK );
+      //mDefaultCamera->SetType( Camera::VIRTUAL_REALITY );
       // Same settings regardless of orientation:
-      const float stereoBase( ( ( mStereoBase / 25.4f ) * GetDpi().y ) * 0.5f );
-      mStereoInfo[LEFT].camera->SetPosition( Vector3( stereoBase, 0.0f, 0.0f ) );
-      mStereoInfo[RIGHT].camera->SetPosition( Vector3( -stereoBase, 0.0f, 0.0f ) );
+      //stereoBase = 0;
+      mStereoInfo[LEFT].camera->SetPosition( Vector3( 0.0f, -stereoBase, 0.0f ) );
+      mStereoInfo[RIGHT].camera->SetPosition( Vector3( 0.f, +stereoBase, 0.0f ) );
       break;
     }
 

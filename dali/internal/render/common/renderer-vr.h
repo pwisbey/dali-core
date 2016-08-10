@@ -462,36 +462,44 @@ inline void GenerateGridVertexBuffer( std::vector<float>& vertexBuffer )
   std::copy( gridVertices, gridVertices+N, vertexBuffer.data() );
   std::copy( gridVertices, gridVertices+N, vertexBuffer.data()+N );
 
+  const float eyeseparation = 0.0f;//0.05f;
+
+  float scale = 1.0f;
   // Process data for both eyes
   for( size_t i = 0; i < N; i += 5 )
   {
     float* co = &vertexBuffer[i];
     float* uv = &vertexBuffer[i+3];
-
 #ifdef DEBUG_USE_HORIZONTAL_GEOMETRY
     co[0] *= 0.5f;
     co[0] -= 0.5f;
     uv[0] *= 0.5f;
 #else
-    co[1] -= 1.0f;
     co[1] *= 0.5f;
+    co[0] *= scale;
+    co[1] *= scale;
+    co[1] -= 0.5f;
     uv[1] *= 0.5f;
 #endif
+    co[1] -= eyeseparation;
   }
 
   for( size_t i = N; i < N*2; i += 5 )
   {
     float* co = &vertexBuffer[i];
     float* uv = &vertexBuffer[i+3];
-
 #ifdef DEBUG_USE_HORIZONTAL_GEOMETRY
     co[0] *= 0.5f;
     co[0] += 0.5f;
     uv[0] *= 0.5f;
 #else
-    co[1] += 1.0f;
+    co[1] *= -1.0f;
     co[1] *= 0.5f;
+    co[0] *= scale;
+    co[1] *= scale;
+    co[1] += 0.5f;
     uv[1] += 1.0f;
+    uv[1] = 1.0f - uv[1];
     uv[1] *= 0.5f;
 #endif
   }

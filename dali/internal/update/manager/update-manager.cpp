@@ -26,6 +26,7 @@
 
 #include <dali/integration-api/core.h>
 #include <dali/integration-api/render-controller.h>
+#include <dali/integration-api/gyroscope-sensor.h>
 #include <dali/internal/common/shader-data.h>
 #include <dali/integration-api/debug.h>
 
@@ -66,6 +67,8 @@
 #include <dali/internal/render/queue/render-queue.h>
 #include <dali/internal/render/gl-resources/texture-cache.h>
 #include <dali/internal/render/shaders/scene-graph-shader.h>
+
+#include <cstdio>
 
 // Un-comment to enable node tree debug logging
 //#define NODE_TREE_LOGGING 1
@@ -160,7 +163,8 @@ struct UpdateManager::Impl
     previousUpdateScene( false ),
     frameCounter( 0 ),
     renderSortingHelper(),
-    renderTaskWaiting( false )
+    renderTaskWaiting( false ),
+    gyroscopeSensor( NULL )
   {
     sceneController = new SceneControllerImpl( renderMessageDispatcher, renderQueue, discardQueue );
 
@@ -272,6 +276,8 @@ struct UpdateManager::Impl
 
   GestureContainer                    gestures;                      ///< A container of owned gesture detectors
   bool                                renderTaskWaiting;             ///< A REFRESH_ONCE render task is waiting to be rendered
+
+  GyroscopeSensor*                    gyroscopeSensor;
 };
 
 UpdateManager::UpdateManager( NotificationManager& notificationManager,
@@ -626,6 +632,11 @@ void UpdateManager::RemoveGesture( PanGesture* gesture )
   }
   // Should not reach here
   DALI_ASSERT_DEBUG(false);
+}
+
+void UpdateManager::SetGyroscopeSensor( Dali::Integration::GyroscopeSensor& sensor )
+{
+  mImpl->gyroscopeSensor = &sensor;
 }
 
 void UpdateManager::AddTextureSet( TextureSet* textureSet )

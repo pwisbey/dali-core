@@ -68,6 +68,7 @@ void TestApplication::Initialize()
     mGlAbstraction,
     mGlSyncAbstraction,
     mGestureManager,
+    NULL,
     mDataRetentionPolicy);
 
   mCore->ContextCreated();

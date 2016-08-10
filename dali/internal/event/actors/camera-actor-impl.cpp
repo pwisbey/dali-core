@@ -360,6 +360,38 @@ bool CameraActor::GetInvertYAxis() const
   return mInvertYAxis;
 }
 
+
+void CameraActor::SetFrustum( float left, float right, float bottom, float top, float near, float far, float eyePosBias )
+{
+  Matrix result;
+  float a = (right + left)/(right-left);
+  float b = (top+bottom)/(top-bottom);
+  float c = -(far+near)/(far-near);
+  float d = -(2*far*near)/(far-near);
+  float e = - (2*near)/(right-left);
+  float f = (2*near)/(top-bottom);
+
+  float mat[16] =
+  {
+    e, 0, a, 0,
+    0, f, b, 0,
+    0, 0, c, d,
+    0, 0,-1, 0
+  };
+
+  std::copy( mat, mat+16, result.AsFloat() );
+}
+
+void CameraActor::SetPerspectiveProjectionFovY( float fovY, float aspect, float near, float far, const Vector2& stereoBias )
+{
+  SetAspectRatio( aspect );
+  SetNearClippingPlane( near );
+  SetFarClippingPlane( far );
+  SetFieldOfView( fovY );
+  SetProjectionMode(Dali::Camera::PERSPECTIVE_PROJECTION);
+  SetStereoBiasMessage( GetEventThreadServices(), *mSceneObject, stereoBias );
+}
+
 void CameraActor::SetPerspectiveProjection( const Size& size, const Vector2& stereoBias /* = Vector2::ZERO */ )
 {
   float width = size.width;

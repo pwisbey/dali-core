@@ -46,7 +46,7 @@ namespace Integration
 {
 class GlSyncAbstraction;
 class RenderController;
-
+class GyroscopeSensor;
 } // namespace Integration
 
 namespace Internal
@@ -332,6 +332,10 @@ public:
    * @post The gesture is destroyed.
    */
   void RemoveGesture( PanGesture* gesture );
+
+  // Sensors
+
+  void SetGyroscopeSensor( Dali::Integration::GyroscopeSensor& sensor );
 
 // Message queue handling
 

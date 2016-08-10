@@ -42,6 +42,7 @@ class GlSyncAbstraction;
 class PlatformAbstraction;
 class RenderController;
 class SystemOverlay;
+class GyroscopeSensor;
 struct Event;
 struct TouchData;
 
@@ -204,6 +205,7 @@ public:
                    GlAbstraction& glAbstraction,
                    GlSyncAbstraction& glSyncAbstraction,
                    GestureManager& gestureManager,
+                   GyroscopeSensor* gyroscopeSensor,
                    ResourcePolicy::DataRetention policy);
 
   /**

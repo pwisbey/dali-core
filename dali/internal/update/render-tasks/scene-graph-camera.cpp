@@ -286,20 +286,27 @@ const PropertyInputImpl* Camera::GetViewMatrix() const
 
 void Camera::Update( BufferIndex updateBufferIndex, const Node& owningNode )
 {
-  // if owning node has changes in world position we need to update camera for next 2 frames
-  if( owningNode.IsLocalMatrixDirty() )
+  if( mType == Dali::Camera::VIRTUAL_REALITY )
   {
     mUpdateViewFlag = UPDATE_COUNT;
-  }
-  if( owningNode.GetDirtyFlags() & VisibleFlag )
-  {
-    // If the visibility changes, the projection matrix needs to be re-calculated.
-    // It may happen the first time an actor is rendered it's rendered only once and becomes invisible,
-    // in the following update the node will be skipped leaving the projection matrix (double buffered)
-    // with the Identity.
-    mUpdateProjectionFlag = UPDATE_COUNT;
-  }
 
+  }
+  else
+  {
+    // if owning node has changes in world position we need to update camera for next 2 frames
+    if( owningNode.IsLocalMatrixDirty() )
+    {
+      mUpdateViewFlag = UPDATE_COUNT;
+    }
+    if( owningNode.GetDirtyFlags() & VisibleFlag )
+    {
+      // If the visibility changes, the projection matrix needs to be re-calculated.
+      // It may happen the first time an actor is rendered it's rendered only once and becomes invisible,
+      // in the following update the node will be skipped leaving the projection matrix (double buffered)
+      // with the Identity.
+      mUpdateProjectionFlag = UPDATE_COUNT;
+    }
+  }
   // if either matrix changed, we need to recalculate the inverse matrix for hit testing to work
   unsigned int viewUpdateCount = UpdateViewMatrix( updateBufferIndex, owningNode );
   unsigned int projectionUpdateCount = UpdateProjection( updateBufferIndex );
@@ -344,6 +351,7 @@ unsigned int Camera::UpdateViewMatrix( BufferIndex updateBufferIndex, const Node
       {
         // camera orientation taken from node - i.e. look in abitrary, unconstrained direction
         case Dali::Camera::FREE_LOOK:
+        case Dali::Camera::VIRTUAL_REALITY:
         {
           Matrix& viewMatrix = mViewMatrix.Get( updateBufferIndex );
           viewMatrix = owningNode.GetWorldMatrix( updateBufferIndex );

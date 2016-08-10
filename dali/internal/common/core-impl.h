@@ -41,6 +41,7 @@ class GlSyncAbstraction;
 class SystemOverlay;
 class UpdateStatus;
 class RenderStatus;
+class GyroscopeSensor;
 struct Event;
 struct TouchData;
 }
@@ -84,6 +85,7 @@ public:
         Integration::GlAbstraction& glAbstraction,
         Integration::GlSyncAbstraction& glSyncAbstraction,
         Integration::GestureManager& gestureManager,
+        Integration::GyroscopeSensor* gyroscopeSensor,
         ResourcePolicy::DataRetention dataRetentionPolicy );
 
   /**

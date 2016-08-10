@@ -159,6 +159,25 @@ public:
   void SetPerspectiveProjection( const Size& size, const Vector2& stereoBias = Vector2::ZERO );
 
   /**
+   * @brief SetPerspectiveProjectionFovY
+   * @param fovY
+   * @param size
+   * @param stereoBias
+   */
+  void SetPerspectiveProjectionFovY( float fovY, float aspect, float near, float far, const Vector2& stereoBias );
+  /**
+   * @brief SetFrustum
+   * @param left
+   * @param right
+   * @param bottom
+   * @param top
+   * @param near
+   * @param far
+   */
+  void SetFrustum( float left, float right, float bottom, float top, float near, float far, float eyePosOffset = 0.0f );
+
+
+  /**
    * @copydoc Dali::CameraActor::SetOrthographicProjection(const Vector2& size);
    */
   void SetOrthographicProjection( const Vector2& size );
