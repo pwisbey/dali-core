@@ -26,7 +26,7 @@ namespace Dali
 DALI_IMPORT_API extern const unsigned int CORE_MAJOR_VERSION; ///< The major version number of the Core library.
 DALI_IMPORT_API extern const unsigned int CORE_MINOR_VERSION; ///< The minor version number of the Core library.
 DALI_IMPORT_API extern const unsigned int CORE_MICRO_VERSION; ///< The micro version number of the Core library.
-DALI_IMPORT_API extern const char * const CORE_BUILD_DATE;    ///< The date/time the Core library was built.
+DALI_IMPORT_API extern const char CORE_BUILD_DATE[];    ///< The date/time the Core library was built.
 } // namespace Dali
 
 #endif // __DALI_CORE_VERSION_H__
