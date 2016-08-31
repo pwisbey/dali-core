@@ -37,8 +37,6 @@
 #include <dali/public-api/render-tasks/render-task.h>
 #include <dali/public-api/animation/animation.h>
 
-#include <dali/integration-api/gyroscope-sensor.h>
-
 namespace Dali
 {
 
@@ -47,7 +45,7 @@ struct Vector2;
 namespace Integration
 {
 class SystemOverlay;
-class GyroscopeSensor;
+class VrEngine;
 }
 
 namespace Internal
@@ -432,15 +430,16 @@ public: // Implementation of EventThreadServices
 public:
 
   // VR
-  void SetGyroscopeSensor( Dali::Integration::GyroscopeSensor* sensor )
+  void SetVrEngine( Dali::Integration::VrEngine* vrEngine )
   {
-    mGyroscopeSensor = sensor;
+    mVrEngine = vrEngine;
   }
 
-  Dali::Integration::GyroscopeSensor* GetGyroscopeSensor()
+  Dali::Integration::VrEngine* GetVrEngine()
   {
-    return mGyroscopeSensor;
+    return mVrEngine;
   }
+
 
 private:
 
@@ -499,7 +498,7 @@ private:
   // The list of render-tasks
   IntrusivePtr<RenderTaskList> mRenderTaskList;
 
-  Dali::Integration::GyroscopeSensor* mGyroscopeSensor;
+  Dali::Integration::VrEngine* mVrEngine;
 
   //TODOVR
   struct StereoInfo

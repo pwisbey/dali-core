@@ -44,10 +44,15 @@
 
 //TODOVR
 #include <dali/internal/render/common/renderer-vr.h>
+#include <dali/integration-api/vr-engine.h>
 #include <cstdio>
+#include <string.h>
 
 //TODOVR
 //#define DEBUG_DISABLE_BARREL_DISTORTION
+
+using namespace Dali::Integration::Vr;
+using Dali::Integration::VrEngine;
 
 namespace Dali
 {
@@ -80,43 +85,23 @@ typedef OwnerContainer< Render::RenderTracker* > RenderTrackerContainer;
 typedef RenderTrackerContainer::Iterator         RenderTrackerIter;
 typedef RenderTrackerContainer::ConstIterator    RenderTrackerConstIter;
 
+#define GL(x) { x; int err = mImpl->context.GetError(); if(err) { DALI_LOG_ERROR( "GL_ERROR: [%d] '%s', %x\n", __LINE__, #x, (unsigned)err);fflush(stderr);fflush(stdout);} else { /*DALI_LOG_ERROR("GL Call: %s\n", #x); fflush(stdout);*/} }
+
 /**
  * Structure to contain VR rendering data
  */
 struct VrImpl
 {
   VrImpl()
-  : mainFrameBufferAttachments( ),
-    mainFrameBuffer( 0 ),
-    mainVRProgramGL( 0 ),
-    vrModeEnabled( true ) //TODOVR
+  : vrEngine( NULL ),
+    vrModeEnabled( true ),
+    initialised( false )//TODOVR
   {
   }
 
-  enum VrUniform
-  {
-    VR_UNIFORM_TEXTURE = 0,
-    VR_UNIFORM_MVP = 1,
-    VR_UNIFORM_MAX
-  };
-
-  struct Vertex
-  {
-    float aPosition[3];
-    float aTexCoord[2];
-  };
-
-  // in case of VR rendering to texture first then applying barrel distortion
-  unsigned int                  mainFrameBufferAttachments[2];
-  unsigned int                  mainFrameBuffer;
-  unsigned int                  mainVRProgramGL;
-  unsigned int                  vertexBuffer; // contains 'cage' data, vec3, vec2
-  unsigned int                  indexBuffer; // contains indices
-  unsigned int                  indicesCount;
-  Matrix                        MVP;
-  int                           uniformLocations[VR_UNIFORM_MAX];
-
+  Dali::Integration::VrEngine*  vrEngine;
   bool                          vrModeEnabled;
+  bool                          initialised;
 };
 
 /**
@@ -266,6 +251,7 @@ void RenderManager::ContextCreated()
 {
   mImpl->context.GlContextCreated();
   mImpl->programController.GlContextCreated();
+
 
   // renderers, textures and gpu buffers cannot reinitialize themselves
   // so they rely on someone reloading the data for them
@@ -560,8 +546,6 @@ ProgramCache* RenderManager::GetProgramCache()
   return &(mImpl->programController);
 }
 
-#define GL(x) { x; int err = mImpl->context.GetError(); if(err) { DALI_LOG_ERROR( "GL_ERROR: '%s', %x\n", #x, (unsigned)err);fflush(stderr);fflush(stdout);} else { /*DALI_LOG_ERROR("GL Call: %s\n", #x); fflush(stdout);*/} }
-
 bool RenderManager::Render( Integration::RenderStatus& status )
 {
   DALI_PRINT_RENDER_START( mImpl->renderBufferIndex );
@@ -582,41 +566,56 @@ bool RenderManager::Render( Integration::RenderStatus& status )
   {
     // check if vr, if true create new main framebuffer, it's not the
     // right place to do it, but will do for now
-    if( mImpl->vrImpl.vrModeEnabled )
+    if( mImpl->vrImpl.vrModeEnabled/* && !mImpl->vrImpl.vrEngine*/ )
     {
-      if( !vr.mainFrameBuffer )
+      if( mImpl->vrImpl.vrEngine && !mImpl->vrImpl.initialised )
       {
-        SetupVRMode();
+        // initialise VR engine
+        VrEngineInitParams params;
+        memset( &params, 0, sizeof( VrEngineInitParams ) );
+        params.screenWidth = mImpl->defaultSurfaceRect.width;
+        params.screenHeight = mImpl->defaultSurfaceRect.height;
+        mImpl->vrImpl.vrEngine->Initialize( &params );
+        mImpl->vrImpl.initialised = true;
+
+        // start VR engine
+        mImpl->vrImpl.vrEngine->Start();
       }
     }
 
-    // switch rendering to adaptor provided (default) buffer
-    GL( mImpl->context.BindFramebuffer( GL_FRAMEBUFFER, vr.vrModeEnabled ? vr.mainFrameBuffer : 0 ) );
+    // prerender
+    if( mImpl->vrImpl.vrModeEnabled && mImpl->vrImpl.vrEngine )
+    {
+      mImpl->vrImpl.vrEngine->PreRender();
+    }
 
-    int err = mImpl->context.GetError();
-    err = err;
-    mImpl->context.Viewport( mImpl->defaultSurfaceRect.x,
-                             mImpl->defaultSurfaceRect.y,
-                             mImpl->defaultSurfaceRect.width,
-                             mImpl->defaultSurfaceRect.height );
+    if( !mImpl->vrImpl.vrModeEnabled )
+    {
+      // switch rendering to adaptor provided (default) buffer
+      GL( mImpl->context.BindFramebuffer( GL_FRAMEBUFFER, 0 ) );
 
-    mImpl->context.ClearColor( mImpl->backgroundColor.r,
-                               mImpl->backgroundColor.g,
-                               mImpl->backgroundColor.b,
-                               mImpl->backgroundColor.a );
+      mImpl->context.Viewport( mImpl->defaultSurfaceRect.x,
+                               mImpl->defaultSurfaceRect.y,
+                               mImpl->defaultSurfaceRect.width,
+                               mImpl->defaultSurfaceRect.height );
 
-    mImpl->context.ClearStencil( 0 );
+      mImpl->context.ClearColor( mImpl->backgroundColor.r,
+                                 mImpl->backgroundColor.g,
+                                 mImpl->backgroundColor.b,
+                                 mImpl->backgroundColor.a );
 
-    // Clear the entire color, depth and stencil buffers for the default framebuffer.
-    // It is important to clear all 3 buffers, for performance on deferred renderers like Mali
-    // e.g. previously when the depth & stencil buffers were NOT cleared, it caused the DDK to exceed a "vertex count limit",
-    // and then stall. That problem is only noticeable when rendering a large number of vertices per frame.
-    mImpl->context.SetScissorTest( false );
-    mImpl->context.ColorMask( true );
-    mImpl->context.DepthMask( true );
-    mImpl->context.StencilMask( 0xFF ); // 8 bit stencil mask, all 1's
-    mImpl->context.Clear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT,  Context::FORCE_CLEAR );
+      mImpl->context.ClearStencil( 0 );
 
+      // Clear the entire color, depth and stencil buffers for the default framebuffer.
+      // It is important to clear all 3 buffers, for performance on deferred renderers like Mali
+      // e.g. previously when the depth & stencil buffers were NOT cleared, it caused the DDK to exceed a "vertex count limit",
+      // and then stall. That problem is only noticeable when rendering a large number of vertices per frame.
+      mImpl->context.SetScissorTest( false );
+      mImpl->context.ColorMask( true );
+      mImpl->context.DepthMask( true );
+      mImpl->context.StencilMask( 0xFF ); // 8 bit stencil mask, all 1's
+      mImpl->context.Clear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT,  Context::FORCE_CLEAR );
+    }
     // reset the program matrices for all programs once per frame
     // this ensures we will set view and projection matrix once per program per camera
     mImpl->programController.ResetProgramMatrices();
@@ -641,7 +640,11 @@ bool RenderManager::Render( Integration::RenderStatus& status )
 
     if( vr.vrModeEnabled )
     {
-      RenderVR();
+      if( mImpl->vrImpl.vrEngine )
+      {
+        mImpl->context.Flush();
+        vr.vrEngine->SubmitFrame();
+      }
     }
   }
 
@@ -679,7 +682,7 @@ void RenderManager::DoRender( RenderInstruction& instruction, Shader& defaultSha
   }
 
   FrameBufferTexture* offscreen = NULL;
-
+  bool vrEye( false );
   if ( instruction.mOffscreenTextureId != 0 )
   {
     offscreen = mImpl->textureCache.GetFramebuffer( instruction.mOffscreenTextureId );
@@ -722,25 +725,69 @@ void RenderManager::DoRender( RenderInstruction& instruction, Shader& defaultSha
   }
   else // !(instruction.mOffscreenTexture)
   {
+    VrEngine* vr = mImpl->vrImpl.vrEngine;
+    if( vr )
+    {
+      mImpl->context.GetError();
+
+      // will read all vr properties at once
+      int lfbo(-1), rfbo(-1), ltex(-1), rtex(-1), bufwidth(-1), bufheight(-1);
+      int properties[] =
+      {
+        VrEngine::EYE_LEFT_CURRENT_FBO_ID, VrEngine::EYE_RIGHT_CURRENT_FBO_ID,
+        VrEngine::EYE_LEFT_CURRENT_TEXTURE_ID, VrEngine::EYE_RIGHT_CURRENT_TEXTURE_ID,
+        VrEngine::EYE_BUFFER_WIDTH, VrEngine::EYE_BUFFER_HEIGHT
+      };
+      void* values[] =
+      {
+        &lfbo, &rfbo, &ltex, &rtex, &bufwidth, &bufheight
+      };
+      if( instruction.mCamera->mType == Dali::Camera::VR_EYE_LEFT )
+      {
+        vrEye = true;
+        vr->Get( properties, values, 6 );
+        //DALI_LOG_ERROR("This is Left VR camera!\n");
+        GL( mImpl->context.BindFramebuffer( GL_FRAMEBUFFER, lfbo ) );
+        GL( mImpl->context.Bind2dTexture( ltex ) );
+        GL( mImpl->context.TexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, bufwidth, bufheight, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL ) );
+      }
+      else if( instruction.mCamera->mType == Dali::Camera::VR_EYE_RIGHT )
+      {
+        vrEye = true;
+        vr->Get( properties, values, 6 );
+        //DALI_LOG_ERROR("This is Right VR camera!\n");
+        GL( mImpl->context.BindFramebuffer( GL_FRAMEBUFFER, rfbo) );
+        GL( mImpl->context.Bind2dTexture( rtex ) );
+        GL( mImpl->context.TexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, bufwidth, bufheight, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL ) );
+      }
+    }
+    else
+    {
+      GL( mImpl->context.BindFramebuffer( GL_FRAMEBUFFER, 0 ) );
+    }
     // switch rendering to adaptor provided (default) buffer
-    mImpl->context.BindFramebuffer( GL_FRAMEBUFFER, mImpl->vrImpl.vrModeEnabled ? mImpl->vrImpl.mainFrameBuffer : 0 );
+
 
     // Check whether a viewport is specified, otherwise the full surface size is used
     if ( instruction.mIsViewportSet )
     {
       // For glViewport the lower-left corner is (0,0)
-      const int y = ( mImpl->defaultSurfaceRect.height - instruction.mViewport.height ) - instruction.mViewport.y;
-      viewportRect.Set( instruction.mViewport.x,  y, instruction.mViewport.width, instruction.mViewport.height );
+      // TODOVR: using 2 buffers, vieport Y starts with 0
+      //const int y = 0;//( mImpl->defaultSurfaceRect.height - instruction.mViewport.height ) - instruction.mViewport.y;
+      //viewportRect.Set( instruction.mViewport.x,  y, instruction.mViewport.width, instruction.mViewport.height );
+      viewportRect.Set( 0, 0, 1024, 1024 );
     }
     else
     {
       viewportRect = mImpl->defaultSurfaceRect;
     }
+
+
   }
 
   mImpl->context.Viewport(viewportRect.x, viewportRect.y, viewportRect.width, viewportRect.height);
 
-  if ( instruction.mIsClearColorSet )
+  if ( vrEye || instruction.mIsClearColorSet )
   {
     mImpl->context.ClearColor( clearColor.r,
                                clearColor.g,
@@ -751,7 +798,14 @@ void RenderManager::DoRender( RenderInstruction& instruction, Shader& defaultSha
     mImpl->context.SetScissorTest( true );
     mImpl->context.Scissor( viewportRect.x, viewportRect.y, viewportRect.width, viewportRect.height );
     mImpl->context.ColorMask( true );
-    mImpl->context.Clear( GL_COLOR_BUFFER_BIT , Context::CHECK_CACHED_VALUES );
+    if( vrEye )
+    {
+      mImpl->context.Clear( GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT, Context::FORCE_CLEAR );
+    }
+    else
+    {
+      mImpl->context.Clear( GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT, Context::FORCE_CLEAR);
+    }
     mImpl->context.SetScissorTest( false );
   }
 
@@ -762,7 +816,7 @@ void RenderManager::DoRender( RenderInstruction& instruction, Shader& defaultSha
                                     mImpl->geometryBatcher,
                                     mImpl->renderBufferIndex );
 
-  if(instruction.mOffscreenTextureId != 0)
+  if(instruction.mOffscreenTextureId != 0 || vrEye)
   {
     GLenum attachments[] = { GL_DEPTH_ATTACHMENT, GL_STENCIL_ATTACHMENT };
     mImpl->context.InvalidateFramebuffer(GL_FRAMEBUFFER, 2, attachments);
@@ -778,267 +832,9 @@ void RenderManager::DoRender( RenderInstruction& instruction, Shader& defaultSha
   }
 }
 
-namespace {
-inline void Orthographic(Matrix& result, float left, float right, float bottom, float top, float near, float far, bool invertYAxis)
+void RenderManager::SetVrEngine( Integration::VrEngine* vrEngine )
 {
-  if ( Equals(right, left) || Equals(top, bottom) || Equals(far, near) )
-  {
-    DALI_LOG_ERROR( "Cannot create orthographic projection matrix with a zero dimension.\n" );
-    DALI_ASSERT_DEBUG( "Cannot create orthographic projection matrix with a zero dimension." );
-    return;
-  }
-
-  float deltaX = right - left;
-  float deltaY = invertYAxis ? bottom - top : top - bottom;
-  float deltaZ = far - near;
-
-  float *m = result.AsFloat();
-  m[0] = -2.0f / deltaX;
-  m[1] = 0.0f;
-  m[2] = 0.0f;
-  m[3] = 0.0f;
-
-  m[4] = 0.0f;
-  m[5] = -2.0f / deltaY;
-  m[6] = 0.0f;
-  m[7] = 0.0f;
-
-  m[8] = 0.0f;
-  m[9] = 0.0f;
-  m[10] = 2.0f / deltaZ;
-  m[11] = 0.0f;
-  m[12] = -(right + left) / deltaX;
-  m[13] = -(top + bottom) / deltaY;
-  m[14] = -(near + far)   / deltaZ;
-  m[15] = 1.0f;
-}
-
-/*
-void LookAt(Matrix& result, const Vector3& eye, const Vector3& target, const Vector3& up)
-{
-  Vector3 vZ = target - eye;
-  vZ.Normalize();
-
-  Vector3 vX = up.Cross(vZ);
-  vX.Normalize();
-
-  Vector3 vY = vZ.Cross(vX);
-  vY.Normalize();
-
-  result.SetInverseTransformComponents(vX, vY, vZ, eye);
-}
-*/
-}
-
-void RenderManager::SetupVRMode()
-{
-  VrImpl& vr = mImpl->vrImpl;
-  Context& ctx =mImpl->context;
-  Integration::GlAbstraction& gl = ctx.GetAbstraction();
-
-  GL( ctx.GenFramebuffers( 1, &vr.mainFrameBuffer ) );
-  GL( ctx.GenTextures( 1, &vr.mainFrameBufferAttachments[0] ) );
-  GL( ctx.BindFramebuffer( GL_FRAMEBUFFER, vr.mainFrameBuffer ) );
-
-  // color attachment
-  GL( ctx.Bind2dTexture( vr.mainFrameBufferAttachments[0] ) );
-  GL( ctx.TexImage2D( GL_TEXTURE_2D, 0, GL_RGBA,
-                             mImpl->defaultSurfaceRect.width,
-                             mImpl->defaultSurfaceRect.height,
-                             0, GL_RGBA, GL_UNSIGNED_BYTE, 0 ) );
-  GL( ctx.TexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR ) );
-  GL( ctx.TexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR ) );
-  GL( ctx.FramebufferTexture2D( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, vr.mainFrameBufferAttachments[0], 0 ) );
-
-  // depth/stencil attachment
-  // if gles3 render depth to the texture
-#if 0
-  GL( mImpl->context.GenTextures( 1, &mImpl->mainFrameBufferAttachments[1] ) );
-  GL( mImpl->context.Bind2dTexture( mImpl->mainFrameBufferAttachments[1] ) );
-  GL( mImpl->context.TexImage2D( GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24,
-                             mImpl->defaultSurfaceRect.width,
-                             mImpl->defaultSurfaceRect.height,
-                             0, GL_DEPTH_COMPONENT, GL_FLOAT, 0 ) );
-  GL( mImpl->context.TexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST ) );
-  GL( mImpl->context.TexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST ) );
-  GL( mImpl->context.FramebufferTexture2D( GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, mImpl->mainFrameBufferAttachments[1], 0 ) );
-#else
-  GL( ctx.GenRenderbuffers( 1, &vr.mainFrameBufferAttachments[1] ) );
-  GL( ctx.BindRenderbuffer( GL_RENDERBUFFER, vr.mainFrameBufferAttachments[1] ) );
-  GL( ctx.RenderbufferStorage( GL_RENDERBUFFER, GL_DEPTH_COMPONENT16,
-                                          mImpl->defaultSurfaceRect.width,
-                                          mImpl->defaultSurfaceRect.height ) );
-  GL( ctx.FramebufferRenderbuffer( GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, vr.mainFrameBufferAttachments[1] ) );
-#endif
-
-  GLenum drawBuffers[1] = { GL_COLOR_ATTACHMENT0 };
-  gl.DrawBuffers( 1, drawBuffers );
-
-  // prepare shader and buffer to render barrel distortion in one go ( with time warp it may need to do with 2 goes )
-  const char* shaderSource[2] =
-  {
-    // vertex shader
-    "attribute vec3 aPosition;\n"
-    "attribute vec2 aTexCoord;\n"
-    "uniform highp mat4 mvp;\n"
-    "varying mediump vec2  vTexCoord;\n"
-    "void main()\n"
-    "{"
-    "  vec3 pos = aPosition;\n"
-    //"  pos.y -= 1.0;\n"
-    "  gl_Position = mvp * vec4( pos, 1.0 );\n"
-    "  mediump vec2 uvs = vec2( aTexCoord );\n"
-//    "  uvs.r = 1.0 - uvs.r;\n"
-    "  vTexCoord = uvs;\n"
-    "}\n\0",
-
-    // fragment shader
-    "uniform sampler2D texSampler;\n"
-    "\n"
-    "varying mediump vec2 vTexCoord;\n"
-    "void main()\n"
-    "{ \n"
-#ifdef DEBUG_DISABLE_BARREL_DISTORTION
-#ifdef DEBUG_VR_TINT_EACH_EYE
-    "  mediump vec4 mulcol = vec4( 1.0, 0.0, 0.0, 1.0 );\n"
-    "  if( vTexCoord.y < 0.5 ) { mulcol = vec4( 0.0, 1.0, 0.0, 1.0 ); }\n"
-    "  gl_FragColor = texture2D( texSampler, vTexCoord ) * mulcol;\n"
-#else
-    "  gl_FragColor = texture2D( texSampler, vTexCoord );\n"
-#endif
-#else
-    "  gl_FragColor = texture2D( texSampler, vTexCoord );\n"
-#endif
-    "}\n\0",
-  };
-
-  // using GL explicitly in order to create shaders and program
-  GLuint shaders[2];
-  GLuint program;
-  for( int i = 0; i < 2; ++i )
-  {
-    GL( shaders[ i ] = ctx.CreateShader( i ? GL_FRAGMENT_SHADER : GL_VERTEX_SHADER ) );
-    GL( ctx.ShaderSource( shaders[i], 1, &shaderSource[i], NULL ) );
-    GL( ctx.CompileShader( shaders[i] ) );
-  }
-
-  GL( program = mImpl->context.CreateProgram() );
-  GL( mImpl->context.AttachShader( program, shaders[0] ) );
-  GL( mImpl->context.AttachShader( program, shaders[1] ) );
-  GL( mImpl->context.LinkProgram( program) );
-
-  vr.mainVRProgramGL = program;
-
-#ifdef DEBUG_DISABLE_BARREL_DISTORTION
-  const float w = 1.0f;//(float)mImpl->defaultSurfaceRect.width;
-  const float h = 1.0f;//(float)mImpl->defaultSurfaceRect.height;
-
-  // create vertex buffer
-  VrImpl::Vertex vertices[] =
-  {
-    { { -w, -h, 0.0f },        { 0.0f, 0.0f } },
-    { {  w, -h, 0.0f },        { 1.0f, 0.0f } },
-    { {  w,  h, 0.0f },        { 1.0f, 1.0f } },
-    { { -w, -h, 0.0f },        { 0.0f, 0.0f } },
-    { {  w,  h, 0.0f },        { 1.0f, 1.0f } },
-    { { -w,  h, 0.0f },        { 0.0f, 1.0f } },
-  };
-
-  GL( ctx.GenBuffers( 1, &vr.vertexBuffer ) );
-  GL( ctx.BindArrayBuffer( vr.vertexBuffer ) );
-  GL( ctx.BufferData( GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW ) );
-#else
-  // create vertex buffer
-  std::vector<float> vertices;
-  std::vector<uint16_t> indices;
-  GenerateGridVertexBuffer( vertices );
-  GenerateGridIndexBuffer( indices );
-
-  // vertex buffer
-  GL( ctx.GenBuffers( 1, &vr.vertexBuffer ) );
-  GL( ctx.BindArrayBuffer( vr.vertexBuffer ) );
-  GL( ctx.BufferData( GL_ARRAY_BUFFER, vertices.size()*sizeof(float), vertices.data(), GL_STATIC_DRAW ) );
-
-  // index buffer
-  GL( ctx.GenBuffers( 1, &vr.indexBuffer ) );
-  GL( ctx.BindArrayBuffer( vr.indexBuffer ) );
-  GL( ctx.BufferData( GL_ARRAY_BUFFER, indices.size()*sizeof(uint16_t), indices.data(), GL_STATIC_DRAW ) );
-  vr.indicesCount = indices.size();
-#endif
-
-  GL( vr.uniformLocations[ VrImpl::VR_UNIFORM_MVP ] = ctx.GetUniformLocation( program, "mvp" ) );
-  GL( vr.uniformLocations[ VrImpl::VR_UNIFORM_TEXTURE ] = ctx.GetUniformLocation( program, "texSampler" ) );
-
-  // mvp
-  Matrix proj, view;
-
-  //float asp = (float)mImpl->defaultSurfaceRect.height / (float)mImpl->defaultSurfaceRect.width;
-
-  float shift = 0.016f;
-  Orthographic( proj, -1.0f, 1.0f, 1.0f+shift, -1.0f+shift, -1.0f, 1.0f, false );
-  //LookAt( view, Vector3( 0.0f, 0.0f, 0.0f ), Vector3( 0.0f, 0.0f, 1.0f ), Vector3( 0.0f, 1.0f, 0.0f ) );
-  //mat.SetTranslation( Vector3(0.0f, 0.0f, 1.0f ) );
-  Matrix::Multiply( vr.MVP, view, proj );
-  vr.MVP = proj;
-
-  //vr.MVP.Multiply( vr.MVP, vp, mat );
-  return;
-}
-
-void RenderManager::RenderVR()
-{
-  static float f = 1.0f;
-  VrImpl& vr = mImpl->vrImpl;
-  Context& ctx = mImpl->context;
-  Integration::GlAbstraction& gl = ctx.GetAbstraction();
-  GL( ctx.BindFramebuffer( GL_FRAMEBUFFER, 0 ) );
-  gl.Viewport( 0, 0, mImpl->defaultSurfaceRect.width, mImpl->defaultSurfaceRect.height );
-  ctx.Scissor( 0, 0, mImpl->defaultSurfaceRect.width, mImpl->defaultSurfaceRect.height );
-  //DALI_LOG_ERROR("VR: %d, %d\n", (int) mImpl->defaultSurfaceRect.width, (int) mImpl->defaultSurfaceRect.height);
-
-  gl.Disable( GL_SCISSOR_TEST );
-  //gl.Disable( GL_DEPTH_TEST );
-  gl.ClearColor( 1.0f, 0.0f, 0.0f, 1.0f );
-  //gl.Clear( GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT );
-  f -= 0.2f;
-  if( f < 0 )
-    f = 1.0f;
-  //GL( gl.Clear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT) );
-  // store old program
-  Program* program = GetProgramCache()->GetCurrentProgram();
-  GetProgramCache()->SetCurrentProgram( NULL );
-  GL( ctx.UseProgram( vr.mainVRProgramGL ) );
-
-  // attributes
-  GL( ctx.BindArrayBuffer( vr.vertexBuffer ) );
-  GL( ctx.VertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, sizeof(VrImpl::Vertex), 0 ) );
-  GL( ctx.VertexAttribPointer( 1, 2, GL_FLOAT, GL_FALSE, sizeof(VrImpl::Vertex), (const void*)(sizeof(float)*3)) );
-  GL( gl.EnableVertexAttribArray( 0 ) );
-  GL( gl.EnableVertexAttribArray( 1 ) );
-
-#ifndef DEBUG_DISABLE_BARREL_DISTORTION
-  GL( ctx.BindElementArrayBuffer( vr.indexBuffer ) );
-#endif
-
-  // uniforms
-  // texture
-  GL( ctx.ActiveTexture( TEXTURE_UNIT_IMAGE ) );
-  GL( ctx.Bind2dTexture( vr.mainFrameBufferAttachments[0] ) );
-  GL( gl.Uniform1i( vr.uniformLocations[ VrImpl::VR_UNIFORM_TEXTURE], 0 ) );
-
-  // matrix
-  GL( gl.UniformMatrix4fv( vr.uniformLocations[ VrImpl::VR_UNIFORM_MVP ],
-      1, GL_FALSE, vr.MVP.AsFloat() ) );
-
-#ifdef DEBUG_DISABLE_BARREL_DISTORTION
-  GL( gl.DrawArrays( GL_TRIANGLES, 0, 6 ) );
-#else
-  GL( gl.DrawElements( GL_TRIANGLES, vr.indicesCount, GL_UNSIGNED_SHORT, 0 ) );
-
-#endif
-
-  if( program )
-    program->Use();
+  mImpl->vrImpl.vrEngine = vrEngine;
 }
 
 } // namespace SceneGraph

@@ -68,8 +68,8 @@ void TestApplication::Initialize()
     mGlAbstraction,
     mGlSyncAbstraction,
     mGestureManager,
-    NULL,
-    mDataRetentionPolicy);
+    mDataRetentionPolicy,
+    NULL );
 
   mCore->ContextCreated();
   mCore->SurfaceResized( mSurfaceWidth, mSurfaceHeight );

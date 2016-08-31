@@ -37,14 +37,14 @@ platform_abstraction_header_files = \
    $(platform_abstraction_src_dir)/resource-cache.h \
    $(platform_abstraction_src_dir)/resource-declarations.h \
    $(platform_abstraction_src_dir)/gl-abstraction.h \
-   $(platform_abstraction_src_dir)/gyroscope-sensor.h \
    $(platform_abstraction_src_dir)/gl-defines.h \
    $(platform_abstraction_src_dir)/gl-sync-abstraction.h \
    $(platform_abstraction_src_dir)/gesture-manager.h \
    $(platform_abstraction_src_dir)/render-controller.h \
    $(platform_abstraction_src_dir)/platform-abstraction.h \
    $(platform_abstraction_src_dir)/system-overlay.h \
-   $(platform_abstraction_src_dir)/lockless-buffer.h
+   $(platform_abstraction_src_dir)/lockless-buffer.h \
+   $(platform_abstraction_src_dir)/vr-engine.h
 
 platform_abstraction_events_header_files = \
    $(platform_abstraction_src_dir)/events/event.h \

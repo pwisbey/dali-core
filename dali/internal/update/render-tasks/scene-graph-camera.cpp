@@ -286,12 +286,6 @@ const PropertyInputImpl* Camera::GetViewMatrix() const
 
 void Camera::Update( BufferIndex updateBufferIndex, const Node& owningNode )
 {
-  if( mType == Dali::Camera::VIRTUAL_REALITY )
-  {
-    mUpdateViewFlag = UPDATE_COUNT;
-
-  }
-  else
   {
     // if owning node has changes in world position we need to update camera for next 2 frames
     if( owningNode.IsLocalMatrixDirty() )
@@ -351,7 +345,8 @@ unsigned int Camera::UpdateViewMatrix( BufferIndex updateBufferIndex, const Node
       {
         // camera orientation taken from node - i.e. look in abitrary, unconstrained direction
         case Dali::Camera::FREE_LOOK:
-        case Dali::Camera::VIRTUAL_REALITY:
+        case Dali::Camera::VR_EYE_LEFT:
+        case Dali::Camera::VR_EYE_RIGHT:
         {
           Matrix& viewMatrix = mViewMatrix.Get( updateBufferIndex );
           viewMatrix = owningNode.GetWorldMatrix( updateBufferIndex );

@@ -127,7 +127,9 @@ inline void SetRenderFlags( const RenderList& renderList, Context& context, bool
 
   // Clear Depth and/or stencil buffers as required.
   // Note: The buffers will only be cleared if written to since a previous clear.
-  context.Clear( clearMask, Context::CHECK_CACHED_VALUES );
+  // TODOVR: if vr force
+  context.Clear( clearMask, Context::FORCE_CLEAR );
+  //context.Clear( clearMask, Context::CHECK_CACHED_VALUES );
 }
 
 /**

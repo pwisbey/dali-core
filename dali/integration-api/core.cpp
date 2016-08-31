@@ -22,7 +22,7 @@
 #include <dali/public-api/common/dali-common.h>
 #include <dali/integration-api/events/event.h>
 #include <dali/integration-api/gl-sync-abstraction.h>
-#include <dali/integration-api/gyroscope-sensor.h>
+#include <dali/integration-api/vr-engine.h>
 #include <dali/internal/common/core-impl.h>
 
 namespace Dali
@@ -32,10 +32,11 @@ namespace Integration
 {
 
 Core* Core::New(RenderController& renderController, PlatformAbstraction& platformAbstraction,
-                GlAbstraction& glAbstraction, GlSyncAbstraction& glSyncAbstraction, GestureManager& gestureManager, GyroscopeSensor* gyroscopeSensor, ResourcePolicy::DataRetention policy )
+                GlAbstraction& glAbstraction, GlSyncAbstraction& glSyncAbstraction, GestureManager& gestureManager, ResourcePolicy::DataRetention policy,
+                VrEngine* vrEngine )
 {
   Core* instance = new Core;
-  instance->mImpl = new Internal::Core( renderController, platformAbstraction, glAbstraction, glSyncAbstraction, gestureManager, gyroscopeSensor, policy );
+  instance->mImpl = new Internal::Core( renderController, platformAbstraction, glAbstraction, glSyncAbstraction, gestureManager, policy, vrEngine );
 
   return instance;
 }

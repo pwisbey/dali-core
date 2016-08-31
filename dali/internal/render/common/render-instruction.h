@@ -144,9 +144,9 @@ public: // Data
   unsigned int mOffscreenTextureId;     ///< Optional offscreen target
   Render::FrameBuffer* mFrameBuffer;
 
+  Camera* mCamera;  ///< camera that is used
 private: // Data
 
-  Camera* mCamera;  ///< camera that is used
   RenderListContainer mRenderLists;     ///< container of all render lists
   RenderListContainer::SizeType mNextFreeRenderList;     ///< index for the next free render list
 

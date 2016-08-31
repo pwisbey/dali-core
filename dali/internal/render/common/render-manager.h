@@ -35,6 +35,7 @@ namespace Integration
 class GlAbstraction;
 class GlSyncAbstraction;
 class RenderStatus;
+class VrEngine;
 }
 
 struct Vector4;
@@ -359,8 +360,9 @@ private:
    */
   void DoRender( RenderInstruction& instruction, Shader& defaultShader );
 
-  void SetupVRMode();
-  void RenderVR();
+public:
+
+  void SetVrEngine( Dali::Integration::VrEngine* vrEngine );
 
 private:
 

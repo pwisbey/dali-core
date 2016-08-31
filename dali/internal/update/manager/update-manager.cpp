@@ -26,7 +26,6 @@
 
 #include <dali/integration-api/core.h>
 #include <dali/integration-api/render-controller.h>
-#include <dali/integration-api/gyroscope-sensor.h>
 #include <dali/internal/common/shader-data.h>
 #include <dali/integration-api/debug.h>
 
@@ -163,8 +162,7 @@ struct UpdateManager::Impl
     previousUpdateScene( false ),
     frameCounter( 0 ),
     renderSortingHelper(),
-    renderTaskWaiting( false ),
-    gyroscopeSensor( NULL )
+    renderTaskWaiting( false )
   {
     sceneController = new SceneControllerImpl( renderMessageDispatcher, renderQueue, discardQueue );
 
@@ -276,8 +274,6 @@ struct UpdateManager::Impl
 
   GestureContainer                    gestures;                      ///< A container of owned gesture detectors
   bool                                renderTaskWaiting;             ///< A REFRESH_ONCE render task is waiting to be rendered
-
-  GyroscopeSensor*                    gyroscopeSensor;
 };
 
 UpdateManager::UpdateManager( NotificationManager& notificationManager,
@@ -632,11 +628,6 @@ void UpdateManager::RemoveGesture( PanGesture* gesture )
   }
   // Should not reach here
   DALI_ASSERT_DEBUG(false);
-}
-
-void UpdateManager::SetGyroscopeSensor( Dali::Integration::GyroscopeSensor& sensor )
-{
-  mImpl->gyroscopeSensor = &sensor;
 }
 
 void UpdateManager::AddTextureSet( TextureSet* textureSet )

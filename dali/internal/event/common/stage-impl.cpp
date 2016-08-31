@@ -41,7 +41,11 @@
 #include <dali/public-api/render-tasks/render-task-list.h>
 #include <iostream> //TODOVR
 
+#include <dali/integration-api/vr-engine.h>
+
 using Dali::Internal::SceneGraph::Node;
+using Dali::Integration::VrEngine;
+using namespace Dali::Integration::Vr;
 
 namespace Dali
 {
@@ -59,47 +63,37 @@ enum Eye
   RIGHT
 };
 
-//TODOVR: Gyroscope constraints
-struct GyroEyeConstraint
+//TODOVR: Sensor constraints
+struct VrEyeConstraint
 {
-  GyroEyeConstraint( Dali::Internal::Stage* stage )
+  VrEyeConstraint( Dali::Internal::Stage* stage )
     : stage( stage )
   {
-    pitch = Radian(Degree(0.0f));
-    yaw = Radian(Degree(180.0f));
-    roll = Radian(Degree(0.0f));
   }
 
   void operator()( Quaternion& current, const PropertyInputContainer& inputs )
   {
     // TODO: get gyro data, update rotation
-    // get data from gyroscope
-    Dali::Integration::GyroscopeSensor* sensor( stage->GetGyroscopeSensor() );
-    if( !sensor->IsEnabled() )
+    // get data from sensor
+    Dali::Integration::VrEngine* vrEngine( stage->GetVrEngine() );
+    if( !vrEngine )
     {
-      sensor->Enable();
-      current.SetEuler( Radian((pitch)), Radian((yaw)), Radian((roll)) );
+      return;
+    }
+
+    VrEngineEyePose eyePose;
+    eyePose.rotation = current;
+    if( vrEngine->Get( VrEngine::EYE_CURRENT_POSE, &eyePose ) )
+    {
+      current = eyePose.rotation;
     }
     else
     {
-      const int packets = 16;
-      Dali::Vector4 accumulated;
-      sensor->ReadPackets( &accumulated, packets );
-      pitch = -accumulated.y;
-      yaw = accumulated.x;
-      roll = accumulated.z;
-      Quaternion rot;
-      rot.SetEuler( Radian((Degree(pitch))), Radian(Degree(yaw)), Radian(Degree(roll)) );
-      current *= rot;
+      current = Quaternion( 1.0f, 0.0f, 0.0f, 0.0f );
     }
-    //current = Dali::Quaternion()
-
   }
-  Dali::Internal::Stage* stage;
 
-  float pitch;
-  float yaw;
-  float roll;
+  Dali::Internal::Stage* stage;
 };
 
 //TODOVR
@@ -410,7 +404,8 @@ void Stage::UpdateCameras()
     {
       const float pixelAspect = GetDpi().y / GetDpi().x;
       float stereoBase( 0.05f );
-
+      int L = LEFT;
+      int R = RIGHT;
       if( mSize.width > mSize.height )
       {
         // Stereo mode with horizontal split is for landscape mode. That's the reason for the cameras being rotated
@@ -477,32 +472,28 @@ void Stage::UpdateCameras()
         const float near = IPD+0.1f;
         //stereoBase = 0.0f;
         fov = Radian( Degree(106) );
-        mStereoInfo[LEFT].camera->SetPerspectiveProjectionFovY( fov, cameraAspect, near, far, Vector2( 0.0f, +stereoBase ) );
+
+        mStereoInfo[L].camera->SetPerspectiveProjectionFovY( fov, cameraAspect, near, far, Vector2( +stereoBase, 0.0f ) );
         //mStereoInfo[LEFT].camera->SetPerspectiveProjection( Size( mSize.width, sizeY ), Vector2::ZERO );
         //mStereoInfo[LEFT].camera->SetPerspectiveProjection( Size( mSize.width, sizeY ), Vector2( 0.0f, stereoBase ) );
         //mStereoInfo[LEFT].camera->SetAspectRatio( cameraAspect );
-        //mStereoInfo[LEFT].camera->SetOrientation( -Dali::ANGLE_90, Vector3::ZAXIS );
+        mStereoInfo[L].camera->SetOrientation( Dali::ANGLE_90, Vector3::ZAXIS );
         //mStereoInfo[LEFT].camera->SetFieldOfView( fov );
-        mStereoInfo[LEFT].renderTask.SetViewport( Viewport( 0, viewPortHeight, mSize.width, viewPortHeight ) );
+        mStereoInfo[L].renderTask.SetViewport( Viewport( 0, 0, 1024, 1024 ) );
 
         //mStereoInfo[RIGHT].camera->SetPerspectiveProjection( Size( mSize.width, sizeY ), Vector2::ZERO );
         //mStereoInfo[RIGHT].camera->SetPerspectiveProjection( Size( mSize.width, sizeY ), Vector2( 0.0, -stereoBase ) );
-        mStereoInfo[RIGHT].camera->SetPerspectiveProjectionFovY( fov, cameraAspect, near, far, Vector2( 0.0f, -stereoBase ) );
+        mStereoInfo[R].camera->SetPerspectiveProjectionFovY( fov, cameraAspect, near, far, Vector2( -stereoBase, 0.0f ) );
         //mStereoInfo[RIGHT].camera->SetAspectRatio( cameraAspect );
-        //mStereoInfo[RIGHT].camera->SetOrientation( -Dali::ANGLE_90, Vector3::ZAXIS );
+        mStereoInfo[R].camera->SetOrientation( Dali::ANGLE_90, Vector3::ZAXIS );
         //mStereoInfo[RIGHT].camera->SetFieldOfView( fov );
-        mStereoInfo[RIGHT].renderTask.SetViewport( Viewport( 0, 0, mSize.width, viewPortHeight ) );
+        mStereoInfo[R].renderTask.SetViewport( Viewport( 0, 0, 1024, 1024 ) );
 
       }
 
-      // VR camera will be feed from gyroscope input, for now using constraints
-      // Camera needs to check gyroscope state every update, simple constraint will
-      // solve the problem, however we need to keep that 'fake' update running, so that
-      // there's 'infinite' animation running. This way we are able to hit the constraint
-      // every frame and update orientation.
       mVRGyroEyeConstraint = Constraint::New<Quaternion>( mDefaultCamera.Get(),
                                                         Dali::Actor::Property::ORIENTATION,
-                                                        GyroEyeConstraint( this ));
+                                                        VrEyeConstraint( this ));
       mVRGyroEyeConstraint.Apply();
       Dali::Actor actor( mDefaultCamera.Get() );
       Quaternion quaternion( Radian(Degree(0)), Vector3( 0.0f, 0.0f, 0.0f ));
@@ -511,13 +502,12 @@ void Stage::UpdateCameras()
       mVRDefaultCameraAnimation.SetLooping( true );
       mVRDefaultCameraAnimation.Play();
 
-      mStereoInfo[LEFT].camera->SetType( Camera::FREE_LOOK );
-      mStereoInfo[RIGHT].camera->SetType( Camera::FREE_LOOK );
-      //mDefaultCamera->SetType( Camera::VIRTUAL_REALITY );
+      mStereoInfo[L].camera->SetType( Camera::VR_EYE_LEFT );
+      mStereoInfo[R].camera->SetType( Camera::VR_EYE_RIGHT );
       // Same settings regardless of orientation:
       //stereoBase = 0;
-      mStereoInfo[LEFT].camera->SetPosition( Vector3( 0.0f, -stereoBase, 0.0f ) );
-      mStereoInfo[RIGHT].camera->SetPosition( Vector3( 0.f, +stereoBase, 0.0f ) );
+      mStereoInfo[L].camera->SetPosition( Vector3( 0.0f, -stereoBase, 0.0f ) );
+      mStereoInfo[R].camera->SetPosition( Vector3( 0.f, +stereoBase, 0.0f ) );
       break;
     }
 

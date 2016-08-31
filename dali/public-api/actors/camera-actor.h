@@ -46,7 +46,8 @@ enum Type
 {
   FREE_LOOK,      ///< Camera orientation is taken from CameraActor @SINCE_1_0.0
   LOOK_AT_TARGET, ///< Camera is oriented to always look at a target @SINCE_1_0.0
-  VIRTUAL_REALITY ///< Camera uses senseors in order to maintain the orientation
+  VR_EYE_LEFT, ///< Camera uses senseors in order to maintain the orientation
+  VR_EYE_RIGHT, ///< Camera uses senseors in order to maintain the orientation
 };
 
 /**

@@ -27,6 +27,9 @@
 #include <dali/integration-api/platform-abstraction.h>
 #include <dali/integration-api/render-controller.h>
 
+// TODOVR
+#include <dali/integration-api/vr-engine.h>
+
 #include <dali/internal/event/actors/actor-impl.h>
 #include <dali/internal/event/animation/animation-playlist.h>
 #include <dali/internal/event/common/notification-manager.h>
@@ -83,11 +86,11 @@ using Integration::GlAbstraction;
 using Integration::Event;
 using Integration::UpdateStatus;
 using Integration::RenderStatus;
-using Integration::GyroscopeSensor;
-
+using Integration::VrEngine;
 Core::Core( RenderController& renderController, PlatformAbstraction& platform,
             GlAbstraction& glAbstraction, GlSyncAbstraction& glSyncAbstraction,
-            GestureManager& gestureManager, GyroscopeSensor* gyroscopeSensor, ResourcePolicy::DataRetention dataRetentionPolicy)
+            GestureManager& gestureManager, ResourcePolicy::DataRetention dataRetentionPolicy,
+            VrEngine* vrEngine )
 : mRenderController( renderController ),
   mPlatform(platform),
   mGestureEventProcessor(NULL),
@@ -119,7 +122,13 @@ Core::Core( RenderController& renderController, PlatformAbstraction& platform,
 
   mGeometryBatcher = new SceneGraph::GeometryBatcher();
 
-  mRenderManager = RenderManager::New( glAbstraction, glSyncAbstraction, *mGeometryBatcher, *mTextureUploadedQueue );
+  mRenderManager = RenderManager::New(
+        glAbstraction,
+        glSyncAbstraction,
+        *mGeometryBatcher,
+        *mTextureUploadedQueue );
+
+  mRenderManager->SetVrEngine( vrEngine );
 
   RenderQueue& renderQueue = mRenderManager->GetRenderQueue();
   TextureCache& textureCache = mRenderManager->GetTextureCache();
@@ -161,7 +170,7 @@ Core::Core( RenderController& renderController, PlatformAbstraction& platform,
   mRelayoutController = IntrusivePtr< RelayoutController >( new RelayoutController( mRenderController ) );
 
   mStage->Initialize();
-  mStage->SetGyroscopeSensor( gyroscopeSensor );
+  mStage->SetVrEngine( vrEngine );
   mResourceClient = new ResourceClient( *mResourceManager, *mStage );
 
   mGestureEventProcessor = new GestureEventProcessor(*mStage, gestureManager, mRenderController);
@@ -170,7 +179,6 @@ Core::Core( RenderController& renderController, PlatformAbstraction& platform,
   mImageFactory = new ImageFactory( *mResourceClient );
   mShaderFactory = new ShaderFactory();
   mUpdateManager->SetShaderSaver( *mShaderFactory );
-  mUpdateManager->SetGyroscopeSensor( *gyroscopeSensor );
   mShaderFactory->LoadDefaultShaders();
 
   GetImplementation(Dali::TypeRegistry::Get()).CallInitFunctions();

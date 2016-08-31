@@ -42,7 +42,7 @@ class GlSyncAbstraction;
 class PlatformAbstraction;
 class RenderController;
 class SystemOverlay;
-class GyroscopeSensor;
+class VrEngine;
 struct Event;
 struct TouchData;
 
@@ -205,8 +205,8 @@ public:
                    GlAbstraction& glAbstraction,
                    GlSyncAbstraction& glSyncAbstraction,
                    GestureManager& gestureManager,
-                   GyroscopeSensor* gyroscopeSensor,
-                   ResourcePolicy::DataRetention policy);
+                   ResourcePolicy::DataRetention policy,
+                   VrEngine* vrEngine );
 
   /**
    * Non-virtual destructor. Core is not intended as a base class.

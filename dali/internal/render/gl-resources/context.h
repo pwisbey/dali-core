@@ -414,8 +414,10 @@ public:
   void Clear(GLbitfield mask, ClearMode mode )
   {
     bool forceClear = (mode == FORCE_CLEAR );
-    mask = mFrameBufferStateCache.GetClearMask( mask, forceClear , mScissorTestEnabled );
-
+    if( !forceClear )
+    {
+      mask = mFrameBufferStateCache.GetClearMask( mask, forceClear , mScissorTestEnabled );
+    }
     if( mask > 0 )
     {
       LOG_GL("Clear %d\n", mask);
