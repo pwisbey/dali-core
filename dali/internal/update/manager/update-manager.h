@@ -56,6 +56,7 @@ class NotificationManager;
 class CompleteNotificationInterface;
 class ResourceManager;
 class TouchResampler;
+class VrManager;
 
 namespace Render
 {
@@ -106,6 +107,7 @@ public:
    * @param[in] textureCacheDispatcher Used for sending messages to texture cache.
    * @param[in] geometryBatcher Used when geometry batching is enabled.
    * @param[in] renderTaskProcessor Handles RenderTasks and RenderInstrucitons.
+   * @param[in] vrManager Provides access to Tizen VR
    */
   UpdateManager( NotificationManager& notificationManager,
                  CompleteNotificationInterface& animationFinishedNotifier,
@@ -117,7 +119,8 @@ public:
                  RenderQueue& renderQueue,
                  TextureCacheDispatcher& textureCacheDispatcher,
                  GeometryBatcher& geometryBatcher,
-                 RenderTaskProcessor& renderTaskProcessor );
+                 RenderTaskProcessor& renderTaskProcessor,
+                 VrManager& vrManager );
 
   /**
    * Destructor.
@@ -150,6 +153,12 @@ public:
    * @param[in] node The node to add.
    */
   void AddNode( Node* node );
+
+  /**
+   * @brief Sets the node to represent the VR "head".
+   * @param[in] node The node to use
+   */
+  void SetVrHeadNode( Node* node );
 
   /**
    * Connect a Node to the scene-graph.
@@ -1280,6 +1289,17 @@ inline void AttachColorTextureToFrameBuffer( UpdateManager& manager, Render::Fra
 
   // Construct message in the message queue memory; note that delete should not be called on the return value
   new (slot) LocalType( &manager, &UpdateManager::AttachColorTextureToFrameBuffer, &frameBuffer, texture, mipmapLevel, layer );
+}
+
+inline void SetVrHeadNode( UpdateManager& manager, Node& node )
+{
+  typedef MessageValue1< UpdateManager, OwnerPointer<Node> > LocalType;
+
+  // Reserve some memory inside the message queue
+  unsigned int* slot = manager.ReserveMessageSlot( sizeof( LocalType ) );
+
+  // Construct message in the message queue memory; note that delete should not be called on the return value
+  new (slot) LocalType( &manager, &UpdateManager::SetVrHeadNode, &node );
 }
 
 

@@ -43,7 +43,6 @@
 
 //TODOVR
 #include <dali/internal/render/common/renderer-vr.h>
-#include <dali/integration-api/vr-engine.h>
 #include <cstdio>
 #include <string.h>
 
@@ -87,23 +86,6 @@ typedef RenderTrackerContainer::ConstIterator    RenderTrackerConstIter;
 #define GL(x) { x; int err = mImpl->context.GetError(); if(err) { DALI_LOG_ERROR( "GL_ERROR: [%d] '%s', %x\n", __LINE__, #x, (unsigned)err);fflush(stderr);fflush(stdout);} else { /*DALI_LOG_ERROR("GL Call: %s\n", #x); fflush(stdout);*/} }
 
 /**
- * Structure to contain VR rendering data
- */
-struct VrImpl
-{
-  VrImpl()
-  : vrEngine( NULL ),
-    vrModeEnabled( true ),
-    initialised( false )//TODOVR
-  {
-  }
-
-  Dali::Integration::VrEngine*  vrEngine;
-  bool                          vrModeEnabled;
-  bool                          initialised;
-};
-
-/**
  * Structure to contain internal data
  */
 struct RenderManager::Impl
@@ -112,7 +94,8 @@ struct RenderManager::Impl
         Integration::GlSyncAbstraction& glSyncAbstraction,
         LockedResourceQueue& textureUploadedQ,
         TextureUploadedDispatcher& postProcessDispatcher,
-        GeometryBatcher& geometryBatcher )
+        GeometryBatcher& geometryBatcher,
+        VrManager& vrManager )
   : context( glAbstraction ),
     glSyncAbstraction( glSyncAbstraction ),
     renderQueue(),
@@ -131,7 +114,8 @@ struct RenderManager::Impl
     firstRenderCompleted( false ),
     defaultShader( NULL ),
     programController( glAbstraction ),
-    geometryBatcher( geometryBatcher )
+    geometryBatcher( geometryBatcher ),
+    vrManager( vrManager )
   {
   }
 
@@ -202,16 +186,17 @@ struct RenderManager::Impl
 
   SceneGraph::GeometryBatcher&  geometryBatcher;          ///< Instance of geometry batcher
 
-  VrImpl                        vrImpl;
+  Dali::Internal::VrManager&    vrManager;                ///< Provides functionality related to Tizen VR
 };
 
 RenderManager* RenderManager::New( Integration::GlAbstraction& glAbstraction,
                                    Integration::GlSyncAbstraction& glSyncAbstraction,
                                    SceneGraph::GeometryBatcher& geometryBatcher,
+                                   VrManager& vrManager,
                                    LockedResourceQueue& textureUploadedQ )
 {
   RenderManager* manager = new RenderManager;
-  manager->mImpl = new Impl( glAbstraction, glSyncAbstraction, textureUploadedQ, *manager, geometryBatcher );
+  manager->mImpl = new Impl( glAbstraction, glSyncAbstraction, textureUploadedQ, *manager, geometryBatcher, vrManager );
   return manager;
 }
 
@@ -557,37 +542,14 @@ bool RenderManager::Render( Integration::RenderStatus& status )
   // Process messages queued during previous update
   mImpl->renderQueue.ProcessMessages( mImpl->renderBufferIndex );
 
-  VrImpl& vr = mImpl->vrImpl;
-
   // No need to make any gl calls if we've done 1st glClear & don't have any renderers to render during startup.
   if( !mImpl->firstRenderCompleted || mImpl->renderersAdded )
   {
-    // check if vr, if true create new main framebuffer, it's not the
-    // right place to do it, but will do for now
-    if( mImpl->vrImpl.vrModeEnabled/* && !mImpl->vrImpl.vrEngine*/ )
-    {
-      if( mImpl->vrImpl.vrEngine && !mImpl->vrImpl.initialised )
-      {
-        // initialise VR engine
-        VrEngineInitParams params;
-        memset( &params, 0, sizeof( VrEngineInitParams ) );
-        params.screenWidth = mImpl->defaultSurfaceRect.width;
-        params.screenHeight = mImpl->defaultSurfaceRect.height;
-        mImpl->vrImpl.vrEngine->Initialize( &params );
-        mImpl->vrImpl.initialised = true;
+    // This will perform pre-render steps with the Tizen VR Engine IF using Tizen VR.
+    VrManager& vrManager = mImpl->vrManager;
+    vrManager.PrepareRender( mImpl->defaultSurfaceRect.width, mImpl->defaultSurfaceRect.height );
 
-        // start VR engine
-        mImpl->vrImpl.vrEngine->Start();
-      }
-    }
-
-    // prerender
-    if( mImpl->vrImpl.vrModeEnabled && mImpl->vrImpl.vrEngine )
-    {
-      mImpl->vrImpl.vrEngine->PreRender();
-    }
-
-    if( !mImpl->vrImpl.vrModeEnabled )
+    if( !vrManager.IsEnabled() )
     {
       // switch rendering to adaptor provided (default) buffer
       GL( mImpl->context.BindFramebuffer( GL_FRAMEBUFFER, 0 ) );
@@ -636,14 +598,8 @@ bool RenderManager::Render( Integration::RenderStatus& status )
       mImpl->firstRenderCompleted = true;
     }
 
-    if( vr.vrModeEnabled )
-    {
-      if( mImpl->vrImpl.vrEngine )
-      {
-        mImpl->context.Flush();
-        vr.vrEngine->SubmitFrame();
-      }
-    }
+    // This will Submit frame to the Tizen VR Engine IF using Tizen VR.
+    vrManager.SubmitFrame( mImpl->context );
   }
 
   //Notify RenderGeometries that rendering has finished
@@ -723,41 +679,10 @@ void RenderManager::DoRender( RenderInstruction& instruction, Shader& defaultSha
   }
   else // !(instruction.mOffscreenTexture)
   {
-    VrEngine* vr = mImpl->vrImpl.vrEngine;
-    if( vr )
+    if( mImpl->vrManager.IsEnabled() )
     {
-      mImpl->context.GetError();
-
-      // will read all vr properties at once
-      int lfbo(-1), rfbo(-1), ltex(-1), rtex(-1), bufwidth(-1), bufheight(-1);
-      int properties[] =
-      {
-        VrEngine::EYE_LEFT_CURRENT_FBO_ID, VrEngine::EYE_RIGHT_CURRENT_FBO_ID,
-        VrEngine::EYE_LEFT_CURRENT_TEXTURE_ID, VrEngine::EYE_RIGHT_CURRENT_TEXTURE_ID,
-        VrEngine::EYE_BUFFER_WIDTH, VrEngine::EYE_BUFFER_HEIGHT
-      };
-      void* values[] =
-      {
-        &lfbo, &rfbo, &ltex, &rtex, &bufwidth, &bufheight
-      };
-      if( instruction.mCamera->mType == Dali::Camera::VR_EYE_LEFT )
-      {
-        vrEye = true;
-        vr->Get( properties, values, 6 );
-        //DALI_LOG_ERROR("This is Left VR camera!\n");
-        GL( mImpl->context.BindFramebuffer( GL_FRAMEBUFFER, lfbo ) );
-        GL( mImpl->context.Bind2dTexture( ltex ) );
-        GL( mImpl->context.TexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, bufwidth, bufheight, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL ) );
-      }
-      else if( instruction.mCamera->mType == Dali::Camera::VR_EYE_RIGHT )
-      {
-        vrEye = true;
-        vr->Get( properties, values, 6 );
-        //DALI_LOG_ERROR("This is Right VR camera!\n");
-        GL( mImpl->context.BindFramebuffer( GL_FRAMEBUFFER, rfbo) );
-        GL( mImpl->context.Bind2dTexture( rtex ) );
-        GL( mImpl->context.TexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, bufwidth, bufheight, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL ) );
-      }
+      // This will render the two eye textures IF using Tizen VR.
+      vrEye = mImpl->vrManager.RenderEyes( mImpl->context, instruction.mCamera->mType );
     }
     else
     {
@@ -779,8 +704,6 @@ void RenderManager::DoRender( RenderInstruction& instruction, Shader& defaultSha
     {
       viewportRect = mImpl->defaultSurfaceRect;
     }
-
-
   }
 
   mImpl->context.Viewport(viewportRect.x, viewportRect.y, viewportRect.width, viewportRect.height);
@@ -828,11 +751,6 @@ void RenderManager::DoRender( RenderInstruction& instruction, Shader& defaultSha
     instruction.mRenderTracker->CreateSyncObject( mImpl->glSyncAbstraction );
     instruction.mRenderTracker = NULL; // Only create once.
   }
-}
-
-void RenderManager::SetVrEngine( Integration::VrEngine* vrEngine )
-{
-  mImpl->vrImpl.vrEngine = vrEngine;
 }
 
 } // namespace SceneGraph

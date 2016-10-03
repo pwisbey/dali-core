@@ -412,6 +412,18 @@ public:
   }
 
   /**
+   * Set the local orientation of the node, relative to its parent.
+   * @param[in] orientation The orientation to set.
+   */
+  void SetOrientation( const Quaternion& orientation )
+  {
+    if( mTransformId != INVALID_TRANSFORM_ID )
+    {
+      mOrientation.Set( 0, orientation );
+    }
+  }
+
+  /**
    * Retrieve the local orientation of the node, relative to its parent.
    * @param[in] bufferIndex The buffer to read from.
    * @return The local orientation.

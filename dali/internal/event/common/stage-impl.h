@@ -45,7 +45,6 @@ struct Vector2;
 namespace Integration
 {
 class SystemOverlay;
-class VrEngine;
 }
 
 namespace Internal
@@ -63,17 +62,6 @@ class LayerList;
 class SystemOverlay;
 class CameraActor;
 class RenderTaskList;
-
-#if 0
-namespace
-{
-struct StereoInfo
-{
-  Dali::RenderTask renderTask;
-  IntrusivePtr<CameraActor> camera;
-};
-}
-#endif
 
 /**
  * Implementation of Stage
@@ -427,20 +415,6 @@ public: // Implementation of EventThreadServices
    */
   virtual BufferIndex GetEventBufferIndex() const;
 
-public:
-
-  // VR
-  void SetVrEngine( Dali::Integration::VrEngine* vrEngine )
-  {
-    mVrEngine = vrEngine;
-  }
-
-  Dali::Integration::VrEngine* GetVrEngine()
-  {
-    return mVrEngine;
-  }
-
-
 private:
 
   /**
@@ -497,8 +471,6 @@ private:
 
   // The list of render-tasks
   IntrusivePtr<RenderTaskList> mRenderTaskList;
-
-  Dali::Integration::VrEngine* mVrEngine;
 
   //TODOVR
   struct StereoInfo

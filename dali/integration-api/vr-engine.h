@@ -40,10 +40,10 @@ struct VrEngineRenderTargetInfo
   int colorTextures[2]; // if -1, then engine will create those buffers
   int depthTextures[2];
 };
-}
+} // Anonymous namespace
+
 /**
  * @brief The VrEngine class
- *
  */
 class VrEngine
 {
@@ -61,7 +61,7 @@ public:
     EYE_BUFFER_COUNT,               // int, number of buffers ( 1 buffer for both eyes ), rw
 
     // render target by data structure
-    EYE_RENDER_TARGETS,        // [VrEngineRenderTargetInfo*]
+    EYE_RENDER_TARGETS,             // [VrEngineRenderTargetInfo*]
 
     EYE_BUFFER_WIDTH,               // [int] width of single eye renderable area
     EYE_BUFFER_HEIGHT,              // [int] height of single eye renderable area
@@ -80,7 +80,7 @@ public:
     EYE_LEFT_TEXTURE3_ID = EYE_LEFT_TEXTURE_ID+3,
 
     EYE_RIGHT_CURRENT_TEXTURE_ID,    // [int] ro, texture id to be written to ( updated with frame index )
-    EYE_RIGHT_TEXTURE_ID = 1065,    // [int] rw, right eye texture id for buffer ( must be passed as EYE_RIGHT_TEXTURE_ID+N )
+    EYE_RIGHT_TEXTURE_ID = 1065,     // [int] rw, right eye texture id for buffer ( must be passed as EYE_RIGHT_TEXTURE_ID+N )
     // helper enums
     EYE_RIGHT_TEXTURE0_ID = EYE_RIGHT_TEXTURE_ID,
     EYE_RIGHT_TEXTURE1_ID = EYE_RIGHT_TEXTURE_ID+1,
@@ -96,7 +96,9 @@ public:
     EYE_RIGHT_DEPTH_TEXTURE_ID = 3064,// [int] right eye depth texture for buffer (EYE_RIGHT_FBO_ID+N)
   };
 
-  VrEngine() {}
+  VrEngine()
+  {
+  }
   virtual ~VrEngine() {}
 
   virtual bool Initialize( Vr::VrEngineInitParams* initParams ) = 0;
@@ -140,6 +142,9 @@ public:
     }
     return true;
   }
+
+private:
+
 };
 
 } // Integration

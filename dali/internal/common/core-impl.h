@@ -22,6 +22,7 @@
 #include <dali/public-api/object/ref-object.h>
 #include <dali/integration-api/context-notifier.h>
 #include <dali/internal/common/owner-pointer.h>
+#include <dali/internal/common/vr-manager-impl.h>
 #include <dali/internal/event/animation/animation-playlist-declarations.h>
 #include <dali/internal/event/common/stage-def.h>
 #include <dali/internal/update/resources/resource-manager-declarations.h>
@@ -87,7 +88,7 @@ public:
         Integration::GlSyncAbstraction& glSyncAbstraction,
         Integration::GestureManager& gestureManager,
         ResourcePolicy::DataRetention dataRetentionPolicy,
-        Integration::VrEngine* vrEngine);
+        Integration::VrEngine* vrEngine );
 
   /**
    * Destructor
@@ -300,6 +301,7 @@ private:
   IntrusivePtr< RelayoutController >        mRelayoutController;          ///< Size negotiation relayout controller
   SceneGraph::GeometryBatcher*              mGeometryBatcher;             ///< Instance of the geometry batcher
   SceneGraph::RenderTaskProcessor*          mRenderTaskProcessor;         ///< Handles the processing of render tasks
+  VrManager*                                mVrManager;                   ///< Provides functionality related to Tizen VR
   bool                                      mIsActive         : 1;        ///< Whether Core is active or suspended
   bool                                      mProcessingEvent  : 1;        ///< True during ProcessEvents()
 

@@ -535,6 +535,11 @@ const SceneGraph::Camera* CameraActor::GetCamera() const
   return mSceneObject;
 }
 
+SceneGraph::Node& CameraActor::GetCameraNode()
+{
+  return *( (SceneGraph::Node*)mNode );
+}
+
 unsigned int CameraActor::GetDefaultPropertyCount() const
 {
   return Actor::GetDefaultPropertyCount() + DEFAULT_PROPERTY_COUNT;

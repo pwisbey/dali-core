@@ -28,7 +28,7 @@
 #include <dali/integration-api/render-controller.h>
 
 // TODOVR
-#include <dali/integration-api/vr-engine.h>
+//#include <dali/integration-api/vr-engine.h>
 
 #include <dali/internal/event/actors/actor-impl.h>
 #include <dali/internal/event/animation/animation-playlist.h>
@@ -125,8 +125,9 @@ Core::Core( RenderController& renderController, PlatformAbstraction& platform,
 
   mRenderTaskProcessor = new SceneGraph::RenderTaskProcessor();
 
-  mRenderManager = RenderManager::New( glAbstraction, glSyncAbstraction, *mGeometryBatcher, *mTextureUploadedQueue );
-  mRenderManager->SetVrEngine( vrEngine );
+  mVrManager = new VrManager( vrEngine );
+
+  mRenderManager = RenderManager::New( glAbstraction, glSyncAbstraction, *mGeometryBatcher, *mVrManager, *mTextureUploadedQueue );
 
   RenderQueue& renderQueue = mRenderManager->GetRenderQueue();
   TextureCache& textureCache = mRenderManager->GetTextureCache();
@@ -159,7 +160,8 @@ Core::Core( RenderController& renderController, PlatformAbstraction& platform,
                                        renderQueue,
                                       *mTextureCacheDispatcher,
                                       *mGeometryBatcher,
-                                      *mRenderTaskProcessor );
+                                      *mRenderTaskProcessor,
+                                      *mVrManager );
 
   mRenderManager->SetShaderSaver( *mUpdateManager );
 
@@ -169,7 +171,7 @@ Core::Core( RenderController& renderController, PlatformAbstraction& platform,
   mRelayoutController = IntrusivePtr< RelayoutController >( new RelayoutController( mRenderController ) );
 
   mStage->Initialize();
-  mStage->SetVrEngine( vrEngine );
+
   mResourceClient = new ResourceClient( *mResourceManager, *mStage );
 
   mGestureEventProcessor = new GestureEventProcessor(*mStage, gestureManager, mRenderController);

@@ -39,12 +39,13 @@
 #include <dali/public-api/events/touch-data.h>
 #include <dali/public-api/object/type-registry.h>
 #include <dali/public-api/render-tasks/render-task-list.h>
-#include <iostream> //TODOVR
 
+//TODOVR
+#include <iostream>
 #include <dali/integration-api/vr-engine.h>
+#include <dali/internal/update/manager/update-manager.h>
 
 using Dali::Internal::SceneGraph::Node;
-using Dali::Integration::VrEngine;
 using namespace Dali::Integration::Vr;
 
 namespace Dali
@@ -63,42 +64,8 @@ enum Eye
   RIGHT
 };
 
-//TODOVR: Sensor constraints
-struct VrEyeConstraint
-{
-  VrEyeConstraint( Dali::Internal::Stage* stage )
-    : stage( stage )
-  {
-  }
-
-  void operator()( Quaternion& current, const PropertyInputContainer& inputs )
-  {
-    // TODO: get gyro data, update rotation
-    // get data from sensor
-    Dali::Integration::VrEngine* vrEngine( stage->GetVrEngine() );
-    if( !vrEngine )
-    {
-      return;
-    }
-
-    VrEngineEyePose eyePose;
-    eyePose.rotation = current;
-    if( vrEngine->Get( VrEngine::EYE_CURRENT_POSE, &eyePose ) )
-    {
-      current = eyePose.rotation;
-    }
-    else
-    {
-      current = Quaternion( 1.0f, 0.0f, 0.0f, 0.0f );
-    }
-  }
-
-  Dali::Internal::Stage* stage;
-};
-
 //TODOVR
 const float DEFAULT_STEREO_BASE( 10.0f );
-//const float DEFAULT_STEREO_BASE( 15.0f );
 
 // Signals
 
@@ -351,6 +318,7 @@ SystemOverlay* Stage::GetSystemOverlayInternal()
 
 void Stage::UpdateCameras()
 {
+  std::cout << "todor: Stage::UpdateCameras(): mViewMode: " << mViewMode << std::endl;
   switch( mViewMode )
   {
     case MONO:
@@ -429,7 +397,6 @@ void Stage::UpdateCameras()
       }
       else
       {
-
 #if 0
         // Portrait aspect - default to VR on device.
         // Precalculations:
@@ -468,9 +435,8 @@ void Stage::UpdateCameras()
         float fov = std::atan( viewPortHeight / ( 2.0f * mSize.width ) );
         const float far = 300.0f;
         float IPD = 0.0635f;
-        stereoBase = -IPD*0.5f;
-        const float near = IPD+0.1f;
-        //stereoBase = 0.0f;
+        stereoBase = -IPD * 0.5f;
+        const float near = IPD + 0.1f;
         fov = Radian( Degree(106) );
 
         mStereoInfo[L].camera->SetPerspectiveProjectionFovY( fov, cameraAspect, near, far, Vector2( +stereoBase, 0.0f ) );
@@ -491,23 +457,15 @@ void Stage::UpdateCameras()
 
       }
 
-      mVRGyroEyeConstraint = Constraint::New<Quaternion>( mDefaultCamera.Get(),
-                                                        Dali::Actor::Property::ORIENTATION,
-                                                        VrEyeConstraint( this ));
-      mVRGyroEyeConstraint.Apply();
-      Dali::Actor actor( mDefaultCamera.Get() );
-      Quaternion quaternion( Radian(Degree(0)), Vector3( 0.0f, 0.0f, 0.0f ));
-      mVRDefaultCameraAnimation = Dali::Animation::New( 1.0f );
-      mVRDefaultCameraAnimation.AnimateBy( Property( actor, Dali::Actor::Property::ORIENTATION ), quaternion, AlphaFunction::LINEAR );
-      mVRDefaultCameraAnimation.SetLooping( true );
-      mVRDefaultCameraAnimation.Play();
-
       mStereoInfo[L].camera->SetType( Camera::VR_EYE_LEFT );
       mStereoInfo[R].camera->SetType( Camera::VR_EYE_RIGHT );
       // Same settings regardless of orientation:
-      //stereoBase = 0;
       mStereoInfo[L].camera->SetPosition( Vector3( 0.0f, -stereoBase, 0.0f ) );
-      mStereoInfo[R].camera->SetPosition( Vector3( 0.f, +stereoBase, 0.0f ) );
+      mStereoInfo[R].camera->SetPosition( Vector3( 0.0f, +stereoBase, 0.0f ) );
+
+      // Inform the VR manager of the Vr head node.
+      Dali::Internal::SceneGraph::SetVrHeadNode( GetUpdateManager(), mDefaultCamera->GetCameraNode() );
+
       break;
     }
 
@@ -558,19 +516,14 @@ void Stage::SetViewMode( ViewMode viewMode )
   //TODOVR: Animate the look angle for testing.
 #if 0
   Quaternion q = mDefaultCamera->GetCurrentOrientation();
-
   float duration = 3.0f;
   mCamAnim = Dali::Animation::New( duration );
-
   Dali::CameraActor a = Dali::CameraActor( ( mDefaultCamera.Get() ) );
-
   float lookAngle = 20.0f;
   mDefaultCamera->SetOrientation( Degree( ( 180.0f - ( lookAngle / 2.0f ) ) ), Vector3::YAXIS );
-
   mCamAnim.AnimateBy( Dali::Property( a, Dali::Actor::Property::ORIENTATION ), Quaternion( Radian( Degree( lookAngle ) ), Vector3::YAXIS ), AlphaFunction::EASE_IN_OUT, TimePeriod( 0.0f, duration / 2.0f ) );
   mCamAnim.AnimateBy( Dali::Property( a, Dali::Actor::Property::ORIENTATION ), Quaternion( Radian( Degree( -lookAngle ) ), Vector3::YAXIS ), AlphaFunction::EASE_IN_OUT, TimePeriod( duration / 2.0f, duration / 2.0f )  );
   mCamAnim.SetLooping( true );
-
   mDefaultCamera->SetOrientation( Radian( Math::PI * 0.95f ), Vector3::YAXIS );
 #endif
 }

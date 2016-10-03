@@ -215,6 +215,12 @@ public:
    */
   const SceneGraph::Camera* GetCamera() const;
 
+  /**
+   * Return the scene graph camera node.
+   * @return The camera node
+   */
+  SceneGraph::Node& GetCameraNode();
+
 public: // properties
 
   /**

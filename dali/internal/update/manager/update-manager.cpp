@@ -134,7 +134,8 @@ struct UpdateManager::Impl
         RenderQueue& renderQueue,
         SceneGraphBuffers& sceneGraphBuffers,
         GeometryBatcher& geometryBatcher,
-        RenderTaskProcessor& renderTaskProcessor )
+        RenderTaskProcessor& renderTaskProcessor,
+        VrManager& vrManager )
   : renderMessageDispatcher( renderManager, renderQueue, sceneGraphBuffers ),
     notificationManager( notificationManager ),
     transformManager(),
@@ -150,6 +151,7 @@ struct UpdateManager::Impl
     renderInstructions( renderManager.GetRenderInstructionContainer() ),
     geometryBatcher( geometryBatcher ),
     renderTaskProcessor( renderTaskProcessor ),
+    vrManager( vrManager ),
     backgroundColor( Dali::Stage::DEFAULT_BACKGROUND_COLOR ),
     taskList( renderMessageDispatcher, resourceManager ),
     systemLevelTaskList( renderMessageDispatcher, resourceManager ),
@@ -235,6 +237,7 @@ struct UpdateManager::Impl
   RenderInstructionContainer&         renderInstructions;            ///< Used to prepare the render instructions
   GeometryBatcher&                    geometryBatcher;               ///< An instance of the GeometryBatcher
   RenderTaskProcessor&                renderTaskProcessor;           ///< Handles RenderTasks and RenderInstrucitons
+  VrManager&                          vrManager;                     ///< Provides functionality related to Tizen VR
 
   Vector4                             backgroundColor;               ///< The glClear color used at the beginning of each frame.
 
@@ -287,7 +290,8 @@ UpdateManager::UpdateManager( NotificationManager& notificationManager,
                               RenderQueue& renderQueue,
                               TextureCacheDispatcher& textureCacheDispatcher,
                               GeometryBatcher& geometryBatcher,
-                              RenderTaskProcessor& renderTaskProcessor )
+                              RenderTaskProcessor& renderTaskProcessor,
+                              VrManager& vrManager )
   : mImpl(NULL)
 {
   mImpl = new Impl( notificationManager,
@@ -300,7 +304,8 @@ UpdateManager::UpdateManager( NotificationManager& notificationManager,
                     renderQueue,
                     mSceneGraphBuffers,
                     geometryBatcher,
-                    renderTaskProcessor );
+                    renderTaskProcessor,
+                    vrManager );
 
   textureCacheDispatcher.SetBufferIndices( &mSceneGraphBuffers );
   mImpl->geometryBatcher.SetUpdateManager( this );
@@ -349,6 +354,11 @@ void UpdateManager::AddNode( Node* node )
       break;
     }
   }
+}
+
+void UpdateManager::SetVrHeadNode( Node* node )
+{
+  mImpl->vrManager.SetHeadNode( node );
 }
 
 void UpdateManager::ConnectNode( Node* parent, Node* node )
@@ -949,6 +959,9 @@ unsigned int UpdateManager::Update( float elapsedSeconds,
 
   //Forward compiled shader programs to event thread for saving
   ForwardCompiledShadersToEventThread();
+
+  // Update the camera look direction from the VR eye pose.
+  mImpl->vrManager.UpdateHeadOrientation();
 
   // Although the scene-graph may not require an update, we still need to synchronize double-buffered
   // renderer lists if the scene was updated in the previous frame.

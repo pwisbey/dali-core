@@ -1,8 +1,8 @@
-#ifndef __DALI_INTERNAL_SCENE_GRAPH_RENDER_MANAGER_H__
-#define __DALI_INTERNAL_SCENE_GRAPH_RENDER_MANAGER_H__
+#ifndef DALI_INTERNAL_SCENE_GRAPH_RENDER_MANAGER_H
+#define DALI_INTERNAL_SCENE_GRAPH_RENDER_MANAGER_H
 
 /*
- * Copyright (c) 2015 Samsung Electronics Co., Ltd.
+ * Copyright (c) 2016 Samsung Electronics Co., Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@
 // INTERNAL INCLUDES
 #include <dali/public-api/math/rect.h>
 #include <dali/internal/common/shader-saver.h>
+#include <dali/internal/common/vr-manager-impl.h>
 #include <dali/internal/update/resources/resource-manager-declarations.h>
 #include <dali/internal/render/common/texture-uploaded-dispatcher.h>
 #include <dali/internal/render/gl-resources/gpu-buffer.h>
@@ -79,12 +80,15 @@ public:
    * @param[in]  glAbstraction The GL abstraction used for rendering.
    * @param[in]  glSyncAbstraction The GL sync abstraction used fence sync creation/deletion.
    * @param[in]  geometryBatcher The geometry batcher instance
-   * @param[out] resourcePostProcessQueue A queue for sending rendered texture ids to the update-thread.*
+   * @param[in]  vrManager Provides access to the core VR module
+   * @param[out] resourcePostProcessQueue A queue for sending rendered texture ids to the update-thread.
    */
   static RenderManager* New( Integration::GlAbstraction& glAbstraction,
                              Integration::GlSyncAbstraction& glSyncAbstraction,
                              SceneGraph::GeometryBatcher& geometryBatcher,
+                             VrManager& vrManager,
                              LockedResourceQueue& resourcePostProcessQueue );
+
 
   /**
    * Non-virtual destructor; not intended as a base class
@@ -360,10 +364,6 @@ private:
    */
   void DoRender( RenderInstruction& instruction, Shader& defaultShader );
 
-public:
-
-  void SetVrEngine( Dali::Integration::VrEngine* vrEngine );
-
 private:
 
   /**
@@ -390,4 +390,4 @@ private:
 
 } // namespace Dali
 
-#endif // __DALI_INTERNAL_SCENE_GRAPH_RENDER_MANAGER_H__
+#endif // DALI_INTERNAL_SCENE_GRAPH_RENDER_MANAGER_H
