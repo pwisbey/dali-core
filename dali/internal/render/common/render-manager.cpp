@@ -46,9 +46,6 @@
 #include <cstdio>
 #include <string.h>
 
-//TODOVR
-//#define DEBUG_DISABLE_BARREL_DISTORTION
-
 using namespace Dali::Integration::Vr;
 using Dali::Integration::VrEngine;
 
@@ -234,7 +231,6 @@ void RenderManager::ContextCreated()
 {
   mImpl->context.GlContextCreated();
   mImpl->programController.GlContextCreated();
-
 
   // renderers, textures and gpu buffers cannot reinitialize themselves
   // so they rely on someone reloading the data for them
@@ -546,10 +542,9 @@ bool RenderManager::Render( Integration::RenderStatus& status )
   if( !mImpl->firstRenderCompleted || mImpl->renderersAdded )
   {
     // This will perform pre-render steps with the Tizen VR Engine IF using Tizen VR.
-    VrManager& vrManager = mImpl->vrManager;
-    vrManager.PrepareRender( mImpl->defaultSurfaceRect.width, mImpl->defaultSurfaceRect.height );
+    mImpl->vrManager.PrepareRender( mImpl->defaultSurfaceRect.width, mImpl->defaultSurfaceRect.height );
 
-    if( !vrManager.IsEnabled() )
+    if( !mImpl->vrManager.IsEnabled() )
     {
       // switch rendering to adaptor provided (default) buffer
       GL( mImpl->context.BindFramebuffer( GL_FRAMEBUFFER, 0 ) );
@@ -599,7 +594,7 @@ bool RenderManager::Render( Integration::RenderStatus& status )
     }
 
     // This will Submit frame to the Tizen VR Engine IF using Tizen VR.
-    vrManager.SubmitFrame( mImpl->context );
+    mImpl->vrManager.SubmitFrame( mImpl->context );
   }
 
   //Notify RenderGeometries that rendering has finished
@@ -690,15 +685,20 @@ void RenderManager::DoRender( RenderInstruction& instruction, Shader& defaultSha
     }
     // switch rendering to adaptor provided (default) buffer
 
-
     // Check whether a viewport is specified, otherwise the full surface size is used
     if ( instruction.mIsViewportSet )
     {
       // For glViewport the lower-left corner is (0,0)
-      // TODOVR: using 2 buffers, vieport Y starts with 0
-      //const int y = 0;//( mImpl->defaultSurfaceRect.height - instruction.mViewport.height ) - instruction.mViewport.y;
-      //viewportRect.Set( instruction.mViewport.x,  y, instruction.mViewport.width, instruction.mViewport.height );
-      viewportRect.Set( 0, 0, 1024, 1024 );
+      if( mImpl->vrManager.IsEnabled() )
+      {
+        // If using VR, get the dimensions from the VR manager.
+        mImpl->vrManager.GetVrViewportDimensions( viewportRect );
+      }
+      else
+      {
+        const int viewPortY = ( mImpl->defaultSurfaceRect.height - instruction.mViewport.height ) - instruction.mViewport.y;
+        viewportRect.Set( instruction.mViewport.x, viewPortY, instruction.mViewport.width, instruction.mViewport.height );
+      }
     }
     else
     {

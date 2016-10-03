@@ -30,7 +30,13 @@ namespace Internal
 
 namespace
 {
+
 #define GL(x) { x; int err = context.GetError(); if(err) { DALI_LOG_ERROR( "GL_ERROR: [%d] '%s', %x\n", __LINE__, #x, (unsigned)err);fflush(stderr);fflush(stdout);} else { /*DALI_LOG_ERROR("GL Call: %s\n", #x); fflush(stdout);*/} }
+
+// These dimensions must match those used by the Tizen VR engine.
+// TODO: Get these from the Tizen VR engine when such an API is implemented.
+const Rect<int> DEFAULT_VR_VIEWPORT_DIMENSIONS( 0, 0, 1024, 1024 );
+
 } // Anonymous namespace
 
 
@@ -167,6 +173,11 @@ void VrManager::SubmitFrame( Context& context )
     context.Flush();
     mVrEngine->SubmitFrame();
   }
+}
+
+void VrManager::GetVrViewportDimensions( Rect<int>& viewportDimensions )
+{
+  viewportDimensions = DEFAULT_VR_VIEWPORT_DIMENSIONS;
 }
 
 

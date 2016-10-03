@@ -22,11 +22,12 @@ class VrManager
   public:
 
     /**
-     * @brief todor
+     * @brief Constructor.
+     * @param[in] vrEngine The VR engine abstraction object
      */
     VrManager( Dali::Integration::VrEngine* vrEngine );
     /**
-     * @brief todor
+     * @brief Destructor.
      */
     ~VrManager();
 
@@ -65,12 +66,17 @@ class VrManager
      */
     void SubmitFrame( Context& context );
 
+    /**
+     * @brief todor
+     */
+    void GetVrViewportDimensions( Rect<int>& viewportDimensions );
+
   private:
 
     Dali::Integration::VrEngine*  mVrEngine;          ///< todor
-    SceneGraph::Node*             mHeadNode;
-    bool                          mEnabled;
-    bool                          mEngineInitialized;
+    SceneGraph::Node*             mHeadNode;          ///< todor
+    bool                          mEnabled;           ///< todor
+    bool                          mEngineInitialized; ///< todor
 
 };
 
