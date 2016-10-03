@@ -161,6 +161,12 @@ public:
   void SetVrHeadNode( Node* node );
 
   /**
+   * @brief Sets VR mode on or off.
+   * @param[in] enabled True to enable VR mode, false to turn VR off
+   */
+  void SetVrEnabled( bool enabled );
+
+  /**
    * Connect a Node to the scene-graph.
    * A disconnected Node has has no parent or children, and its properties cannot be animated/constrained.
    * @pre The node does not already have a parent.
@@ -1302,6 +1308,16 @@ inline void SetVrHeadNode( UpdateManager& manager, Node& node )
   new (slot) LocalType( &manager, &UpdateManager::SetVrHeadNode, &node );
 }
 
+inline void SetVrEnabled( UpdateManager& manager, bool enabled )
+{
+  typedef MessageValue1< UpdateManager, OwnerPointer<bool> > LocalType;
+
+  // Reserve some memory inside the message queue
+  unsigned int* slot = manager.ReserveMessageSlot( sizeof( LocalType ) );
+
+  // Construct message in the message queue memory; note that delete should not be called on the return value
+  new (slot) LocalType( &manager, &UpdateManager::SetVrEnabled, &enabled );
+}
 
 } // namespace SceneGraph
 

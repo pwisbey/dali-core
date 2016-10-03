@@ -361,6 +361,11 @@ void UpdateManager::SetVrHeadNode( Node* node )
   mImpl->vrManager.SetHeadNode( node );
 }
 
+void UpdateManager::SetVrEnabled( bool enabled )
+{
+  mImpl->vrManager.SetEnabled( enabled );
+}
+
 void UpdateManager::ConnectNode( Node* parent, Node* node )
 {
   DALI_ASSERT_ALWAYS( NULL != parent );

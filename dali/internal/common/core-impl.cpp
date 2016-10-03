@@ -27,9 +27,6 @@
 #include <dali/integration-api/platform-abstraction.h>
 #include <dali/integration-api/render-controller.h>
 
-// TODOVR
-//#include <dali/integration-api/vr-engine.h>
-
 #include <dali/internal/event/actors/actor-impl.h>
 #include <dali/internal/event/animation/animation-playlist.h>
 #include <dali/internal/event/common/notification-manager.h>
