@@ -387,6 +387,8 @@ Integration::SystemOverlay& Core::GetSystemOverlay()
 void Core::SetViewMode( ViewMode viewMode )
 {
   mStage->SetViewMode( viewMode );
+  // If setting a VR ViewMode, enable VR also.
+  SetVrEnabled( viewMode == VR );
 }
 
 ViewMode Core::GetViewMode() const
@@ -402,6 +404,11 @@ void Core::SetStereoBase( float stereoBase )
 float Core::GetStereoBase() const
 {
   return mStage->GetStereoBase();
+}
+
+void Core::SetVrEnabled( bool enabled )
+{
+  mVrManager->SetEnabled( enabled );
 }
 
 StagePtr Core::GetCurrentStage()

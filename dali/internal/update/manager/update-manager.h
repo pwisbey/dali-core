@@ -1310,13 +1310,13 @@ inline void SetVrHeadNode( UpdateManager& manager, Node& node )
 
 inline void SetVrEnabled( UpdateManager& manager, bool enabled )
 {
-  typedef MessageValue1< UpdateManager, OwnerPointer<bool> > LocalType;
+  typedef MessageValue1< UpdateManager, bool > LocalType;
 
   // Reserve some memory inside the message queue
   unsigned int* slot = manager.ReserveMessageSlot( sizeof( LocalType ) );
 
   // Construct message in the message queue memory; note that delete should not be called on the return value
-  new (slot) LocalType( &manager, &UpdateManager::SetVrEnabled, &enabled );
+  new (slot) LocalType( &manager, &UpdateManager::SetVrEnabled, enabled );
 }
 
 } // namespace SceneGraph

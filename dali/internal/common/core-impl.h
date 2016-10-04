@@ -197,6 +197,11 @@ public:
    */
   float GetStereoBase() const;
 
+  /**
+   * @copydoc Dali::Integration::Core::SetVrEnabled()
+   */
+  void SetVrEnabled( bool enabled );
+
 private:  // for use by ThreadLocalStorage
 
   /**
