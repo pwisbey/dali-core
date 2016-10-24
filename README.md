@@ -20,15 +20,15 @@
 
 ## NON-SMACK Targets
 
- gbs build -A [TARGET_ARCH]
+         $ gbs build -A [TARGET_ARCH]
 
 ## SMACK enabled Targets
 
- gbs build -A [TARGET_ARCH] --define "%enable_dali_smack_rules 1"
+         $ gbs build -A [TARGET_ARCH] --define "%enable_dali_smack_rules 1"
 
 ## DEBUG Builds
 
- gbs build -A [TARGET_ARCH] --define "%enable_debug 1"
+         $ gbs build -A [TARGET_ARCH] --define "%enable_debug 1"
 
 # 2. Building for Ubuntu desktop
 
@@ -41,23 +41,24 @@
 To build for desktop first ensure ALL sources are selected:
  - Go to Ubuntu Settings and then to "Software & Updates"
  - In the "Ubuntu Software" tab, ensure ALL software sources are ticked
-   (This is required because we install some community-maintained free & open-source software)
+
+(This is required because we install some community-maintained free & open-source software)
 
 Then you can create a dali-env folder in your home folder with:
 
- dali-core/build/scripts/dali_env -c
+         $ dali-core/build/scripts/dali_env -c
 
 This will also download any dependencies that the dali repositories require.
 
 You can save the environment variables to a file:
 
- dali-env/opt/bin/dali_env -s > setenv
+         $ dali-env/opt/bin/dali_env -s > setenv
 
 This process only needs to be done once.
 
 Next source these variables:
 
- . setenv
+         $ . setenv
 
 You will have to source these variables every time you open up a new terminal (or you can add to .bashrc if you prefer).
 
@@ -66,13 +67,13 @@ You will have to source these variables every time you open up a new terminal (o
 
 To build the repository enter the 'build/tizen' folder:
 
- cd dali-core/build/tizen
+         $ cd dali-core/build/tizen
 
 Then run the following commands:
 
- autoreconf --install
- ./configure --prefix=$DESKTOP_PREFIX
- make install -j8
+         $ autoreconf --install
+         $ ./configure --prefix=$DESKTOP_PREFIX
+         $ make install -j8
 
 
 ## Build target options
@@ -84,10 +85,10 @@ When building, the OpenGL ES version of the target should be specified.
 Valid version options are 20, 30, 31
 
 With configure:
-Add: --enable-gles=X
+Add: *--enable-gles=X*
 
 With gbs:
-Add to the gbs build line: --define "%target_gles_version X"
+Add to the gbs build line: *--define "%target_gles_version X"*
 
 
 ## Building and executing test cases
@@ -105,22 +106,22 @@ Installation of this is built in to the main dali_env script.
 
 First create a directory for the environment:
 
-mkdir -p ~/dali-env-emscripten
+         $ mkdir -p ~/dali-env-emscripten
 
 Now run the dali_env script. This will download and build the Emscripten SDK, which may take several minutes.
 The script may ask for your password as it will need to install any package prerequisites.
 Note the "-e" option for Emscripten.
 
-cd ~/dali-env-emscripten
-PATH-TO-DALI-CORE/build/scripts/dali_env -c -e
+         $ cd ~/dali-env-emscripten
+         $ PATH-TO-DALI-CORE/build/scripts/dali_env -c -e
 
 Create the setenv script. A new section for Emscripten will be created at the top.
 
-./dali-env/opt/bin/dali_env -s > setenv
+         $ ./dali-env/opt/bin/dali_env -s > setenv
 
 Run the setenv script to setup environment variables.
 
-. ./setenv
+         $ . ./setenv
 
 Warning: As of 19/01/2015 with a userID > 6 digits there was a bug in llvm that caused
 the build to fail. So I've used the incoming branches of the emscripten sdk and not latest.
@@ -130,13 +131,13 @@ the build to fail. So I've used the incoming branches of the emscripten sdk and 
 
 Clean the build first:
 
-cd ./dali-core/build/tizen
-git clean -dxf
-autoreconf --install
+         $ cd ./dali-core/build/tizen
+         $ git clean -dxf
+         $ autoreconf --install
 
 Use llvm's drop in replacements for configure & make:
 
-emconfigure ./configure --verbose --prefix=$DESKTOP_PREFIX --enable-emscripten=yes --enable-debug=yes --enable-profile=UBUNTU --enable-gles=20
-emmake make install -j8
+         $ emconfigure ./configure --verbose --prefix=$DESKTOP_PREFIX --enable-emscripten=yes --enable-debug=yes --enable-profile=UBUNTU --enable-gles=20
+         $ emmake make install -j8
 
 
