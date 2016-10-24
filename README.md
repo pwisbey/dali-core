@@ -1,4 +1,4 @@
-<img src="https://dalihub.github.io/images/DaliLogo640x400.png width=640">
+<img src="https://dalihub.github.io/images/DaliLogo640x400.png" width=640>
 
 T.O.C.
 ======
