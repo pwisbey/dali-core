@@ -1,51 +1,42 @@
-<img src="https://dalihub.github.io/images/DaliLogo640x400.png" width=640>
+<img src="https://dalihub.github.io/images/DaliLogo320x200.png">
 
-T.O.C.
-======
-
- 1.   GBS Builds
- 1.1. NON-SMACK Targets
- 1.2. SMACK enabled Targets
- 1.3. DEBUG Builds
- 2.   Building for Ubuntu desktop
- 2.1. Minimum Requirements
- 2.2. Creating a DALi Environment
- 2.3. Building the Repository
- 2.4. Build target options
- 2.5. Building and executing test cases
- 3.   Building DALi as Javascript using Emscripten
- 3.1. Creating a DALi Environment for Emscripten Javascript builds
- 3.2. Building the repository as Javascript using Emscripten
+# T.O.C.
 
 1. GBS Builds
-=============
+   * NON-SMACK Targets
+   * SMACK enabled Targets
+   * DEBUG Builds
+2. Building for Ubuntu desktop
+   * Minimum Requirements
+   * Creating a DALi Environment
+   * Building the Repository
+   * Build target options
+   * Building and executing test cases
+3. Building DALi as Javascript using Emscripten
+   * Creating a DALi Environment for Emscripten Javascript builds
+   * Building the repository as Javascript using Emscripten
 
-1.1. NON-SMACK Targets
-----------------------
+# 1. GBS Builds
+
+## NON-SMACK Targets
 
  gbs build -A [TARGET_ARCH]
 
-1.2. SMACK enabled Targets
---------------------------
+## SMACK enabled Targets
 
  gbs build -A [TARGET_ARCH] --define "%enable_dali_smack_rules 1"
 
-1.3. DEBUG Builds
------------------
+## DEBUG Builds
 
  gbs build -A [TARGET_ARCH] --define "%enable_debug 1"
 
+# 2. Building for Ubuntu desktop
 
-2. Building for Ubuntu desktop
-==============================
-
-2.1. Minimum Requirements
-------------------------
+## Minimum Requirements
 
  - Ubuntu 14.04
 
-2.2. Creating a DALi Environment
--------------------------------
+## Creating a DALi Environment
 
 To build for desktop first ensure ALL sources are selected:
  - Go to Ubuntu Settings and then to "Software & Updates"
@@ -71,8 +62,7 @@ Next source these variables:
 You will have to source these variables every time you open up a new terminal (or you can add to .bashrc if you prefer).
 
 
-2.3. Building the Repository
-----------------------------
+## Building the Repository
 
 To build the repository enter the 'build/tizen' folder:
 
@@ -85,8 +75,7 @@ Then run the following commands:
  make install -j8
 
 
-2.4. Build target options
--------------------------
+## Build target options
 
 OpenGL ES context:
 
@@ -101,57 +90,53 @@ With gbs:
 Add to the gbs build line: --define "%target_gles_version X"
 
 
-2.5. Building and executing test cases
---------------------------------------
+## Building and executing test cases
 
 See the README.md in dali-core/automated-tests.
 
 
-3. Building DALi as Javascript using Emscripten
------------------------------------------------
+# 3. Building DALi as Javascript using Emscripten
 
 
-3.1. Environment for Emscripten Javascript builds
---------------------------------------------------
+## Environment for Emscripten Javascript builds
 
 To build the Javascript version of DALi, the Emscripten SDK is required.
 Installation of this is built in to the main dali_env script.
 
 First create a directory for the environment:
 
-# mkdir -p ~/dali-env-emscripten
+mkdir -p ~/dali-env-emscripten
 
 Now run the dali_env script. This will download and build the Emscripten SDK, which may take several minutes.
 The script may ask for your password as it will need to install any package prerequisites.
 Note the "-e" option for Emscripten.
 
-# cd ~/dali-env-emscripten
-# PATH-TO-DALI-CORE/build/scripts/dali_env -c -e
+cd ~/dali-env-emscripten
+PATH-TO-DALI-CORE/build/scripts/dali_env -c -e
 
 Create the setenv script. A new section for Emscripten will be created at the top.
 
-# ./dali-env/opt/bin/dali_env -s > setenv
+./dali-env/opt/bin/dali_env -s > setenv
 
 Run the setenv script to setup environment variables.
 
-# . ./setenv
+. ./setenv
 
 Warning: As of 19/01/2015 with a userID > 6 digits there was a bug in llvm that caused
 the build to fail. So I've used the incoming branches of the emscripten sdk and not latest.
 
 
-3.2. Building the repository as Javascript using Emscripten
------------------------------------------------------------
+## Building the repository as Javascript using Emscripten
 
 Clean the build first:
 
-# cd ./dali-core/build/tizen
-# git clean -dxf
-# autoreconf --install
+cd ./dali-core/build/tizen
+git clean -dxf
+autoreconf --install
 
 Use llvm's drop in replacements for configure & make:
 
-# emconfigure ./configure --verbose --prefix=$DESKTOP_PREFIX --enable-emscripten=yes --enable-debug=yes --enable-profile=UBUNTU --enable-gles=20
-# emmake make install -j8
+emconfigure ./configure --verbose --prefix=$DESKTOP_PREFIX --enable-emscripten=yes --enable-debug=yes --enable-profile=UBUNTU --enable-gles=20
+emmake make install -j8
 
 
