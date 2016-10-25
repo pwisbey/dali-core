@@ -1,20 +1,18 @@
 <img src="https://dalihub.github.io/images/DaliLogo320x200.png">
 
-# T.O.C.
-
-1. GBS Builds
-   * NON-SMACK Targets
-   * SMACK enabled Targets
-   * DEBUG Builds
-2. Building for Ubuntu desktop
-   * Minimum Requirements
-   * Creating a DALi Environment
-   * Building the Repository
-   * Build target options
-   * Building and executing test cases
-3. Building DALi as Javascript using Emscripten
-   * Creating a DALi Environment for Emscripten Javascript builds
-   * Building the repository as Javascript using Emscripten
+   * [1. GBS Builds](#1-gbs-builds)
+      * [NON-SMACK Targets](#non-smack-targets)
+      * [SMACK enabled Targets](#smack-enabled-targets)
+      * [DEBUG Builds](#debug-builds)
+   * [2. Building for Ubuntu desktop](#2-building-for-ubuntu-desktop)
+      * [Minimum Requirements](#minimum-requirements)
+      * [Creating a DALi Environment](#creating-a-dali-environment)
+      * [Building the Repository](#building-the-repository)
+      * [Build target options](#build-target-options)
+      * [Building and executing test cases](#building-and-executing-test-cases)
+   * [3. Building DALi as Javascript using Emscripten](#3-building-dali-as-javascript-using-emscripten)
+      * [Environment for Emscripten Javascript builds](#environment-for-emscripten-javascript-builds)
+      * [Building the repository as Javascript using Emscripten](#building-the-repository-as-javascript-using-emscripten)
 
 # 1. GBS Builds
 
