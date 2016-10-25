@@ -3,41 +3,27 @@
 # Table of Contents
 
    * [Build Instructions](#build-instructions)
-      * [1. GBS Builds](#1-gbs-builds)
-         * [NON-SMACK Targets](#non-smack-targets)
-         * [SMACK enabled Targets](#smack-enabled-targets)
-         * [DEBUG Builds](#debug-builds)
-      * [2. Building for Ubuntu desktop](#2-building-for-ubuntu-desktop)
+      * [1. Building for Ubuntu desktop](#1-building-for-ubuntu-desktop)
          * [Minimum Requirements](#minimum-requirements)
          * [Creating a DALi Environment](#creating-a-dali-environment)
          * [Building the Repository](#building-the-repository)
          * [Build target options](#build-target-options)
          * [Building and executing test cases](#building-and-executing-test-cases)
+      * [2. GBS Builds](#2-gbs-builds)
+         * [NON-SMACK Targets](#non-smack-targets)
+         * [SMACK enabled Targets](#smack-enabled-targets)
+         * [DEBUG Builds](#debug-builds)
       * [3. Building DALi as Javascript using Emscripten](#3-building-dali-as-javascript-using-emscripten)
          * [Environment for Emscripten Javascript builds](#environment-for-emscripten-javascript-builds)
          * [Building the repository as Javascript using Emscripten](#building-the-repository-as-javascript-using-emscripten)
 
 # Build Instructions
 
-## 1. GBS Builds
-
-### NON-SMACK Targets
-
-         $ gbs build -A [TARGET_ARCH]
-
-### SMACK enabled Targets
-
-         $ gbs build -A [TARGET_ARCH] --define "%enable_dali_smack_rules 1"
-
-### DEBUG Builds
-
-         $ gbs build -A [TARGET_ARCH] --define "%enable_debug 1"
-
-## 2. Building for Ubuntu desktop
+## 1. Building for Ubuntu desktop
 
 ### Minimum Requirements
 
- - Ubuntu 14.04
+ - Ubuntu 14.04 or later
 
 ### Creating a DALi Environment
 
@@ -78,7 +64,6 @@ Then run the following commands:
          $ ./configure --prefix=$DESKTOP_PREFIX
          $ make install -j8
 
-
 ### Build target options
 
 OpenGL ES context:
@@ -98,6 +83,19 @@ Add to the gbs build line: *--define "%target_gles_version X"*
 
 See the README.md in dali-core/automated-tests.
 
+## 2. GBS Builds
+
+### NON-SMACK Targets
+
+         $ gbs build -A [TARGET_ARCH]
+
+### SMACK enabled Targets
+
+         $ gbs build -A [TARGET_ARCH] --define "%enable_dali_smack_rules 1"
+
+### DEBUG Builds
+
+         $ gbs build -A [TARGET_ARCH] --define "%enable_debug 1"
 
 ## 3. Building DALi as Javascript using Emscripten
 
@@ -128,7 +126,6 @@ Run the setenv script to setup environment variables.
 
 Warning: As of 19/01/2015 with a userID > 6 digits there was a bug in llvm that caused
 the build to fail. So I've used the incoming branches of the emscripten sdk and not latest.
-
 
 ### Building the repository as Javascript using Emscripten
 
